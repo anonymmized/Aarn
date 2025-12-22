@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <dirent.h>
+#include "dirs_help.h"
 
 #define MAXFILES 500
 #define MAXLINE 1000
@@ -42,9 +43,9 @@ int parse_command(char *filepath) {
     if (colon != NULL && *(colon + 1) == ' ') {
         char *filetype = colon + 2;
         filetype[strcspn(filetype, "\n")] = '\0';
-
-        // printf("Filetype: %s\n", filetype);
-
+        if (strstr(filetype, "directory")) {
+            printf("%s → Directory\n", filepath);
+        }
         if (strstr(filetype, "text") || strstr(filetype, "ASCII")) {
             printf("%s → Text file\n", filepath);
         } else if (strstr(filetype, "executable")) {
@@ -56,31 +57,7 @@ int parse_command(char *filepath) {
     return 0;
 }
 
-int list_current_dir(char arr[MAXFILES][MAXLINE], const char *directory) {
-    DIR *dir;
-    struct dirent *entry;
-    dir = opendir(directory);
-    if (!dir) {
-        printf("Error with opening\n");
-        return -1;
-    }
-    int i = 0;
-    while ((entry = readdir(dir)) != NULL) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue;
-        }
-        if (i >= MAXFILES) {
-            printf("Too many files (limit: %d)\n", MAXFILES);
-            break;
-        }
-        strncpy(arr[i], entry->d_name, MAXLINE - 1);
-        arr[i][MAXLINE - 1] = '\0';
-        parse_command(arr[i]);
-        i++;
-    }
-    closedir(dir);
-    return i;
-}
+
 
 int main() {
     char dir[MAXLINE];
