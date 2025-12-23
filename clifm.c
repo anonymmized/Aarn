@@ -57,18 +57,61 @@ int parse_command(char *filepath) {
     return 0;
 }
 
+int m_getline(char *line, int lim) {
+    int i = 0;
+    int c;
+    while (--lim > 0 && (c = getchar()) != EOF && c != '\n') {
+        line[i++] = c;
+    }
+    if (c == '\n') {
+        line[i++] = '\n';
+    }
+    line[i] = '\0';
+    return i;
+}
 
+int get_dir(const char *input, char *dir, size_t dir_len) {
+    const char *p = input;
+    if (strncmp(p, "ls", 2) != 0) {
+        return -1;
+    }
+
+    if (p[2] == '\0' || p[2] == '\n') {
+        dir[0] = '.';
+        dir[1] = '\0';
+        return 0;
+    }
+
+    p += 2;
+    size_t i = 0;
+    while (*p == ' ') p++;
+    while (*p != '\0' && i + 1 < dir_len) {
+        dir[i] = *p;
+        p++;
+        i++;
+    }
+    dir[i] = '\0';
+    return 0;
+}
 
 int main() {
+    char input[MAXLINE];
     char dir[MAXLINE];
-    printf("Enter directory to parse\n");
-    printf("> ");
-    scanf("%999s", dir);
-    int len = list_current_dir(files_dirs, dir);
-    /*
-    for (int i = 0; i < len; i++) {
-        printf("- %s\n", files_dirs[i]);
+
+    while (1) {
+        printf("> ");
+        if (fgets(input, sizeof(input), stdin) == NULL) return -1;
+        input[strcspn(input, "\n")] = '\0';
+        if (get_dir(input, dir, sizeof(dir)) == 0) {
+            if (check_dir(dir) != 0) {
+                printf("Not directory\n");
+                continue;
+            } 
+            int len = list_current_dir(files_dirs, dir);
+        }
+        
+        printf("\n");
     }
-    */
+    
     return 0;
 }

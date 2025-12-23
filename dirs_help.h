@@ -7,5 +7,6 @@
 int list_current_dir(char arr[MAXFILES][MAXLINE], const char *directory);
 int parse_command(char *filepath);
 void normalize_path(char *path);
+int check_dir(char *s);
 
 #endif

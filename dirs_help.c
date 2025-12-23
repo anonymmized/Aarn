@@ -11,7 +11,7 @@ int list_current_dir(char arr[MAXFILES][MAXLINE], const char *directory) {
     struct dirent *entry;
     dir = opendir(directory);
     if (!dir) {
-        printf("Error with opening\n");
+        printf("Error with opening or wrong directory\n");
         return -1;
     }
     int i = 0;
@@ -33,6 +33,17 @@ int list_current_dir(char arr[MAXFILES][MAXLINE], const char *directory) {
     }
     closedir(dir);
     return i;
+}
+
+int check_dir(char *s) {
+    char *p = s;
+    while (*p != '\0') {
+        if (*p == '/' || *p == '.') {
+            return 0;
+        }
+        p++;
+    }
+    return -1;
 }
 
 void normalize_path(char *path) {
