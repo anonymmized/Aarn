@@ -8,6 +8,22 @@
 #define MAXLINE 1000
 #define MAX_PATH 1024
 #define MAX_OUTPUT 1024
+#define MAXARGS 50
+
+char input_args[MAXARGS][MAXLINE] = {0};
+int args_count = 0;
+const char *del_type = " ";
+
+void parse_args(char *input) {
+    args_count = 0;
+    char *token = strtok(input, del_type);
+    while (token != NULL) {
+        strncpy(input_args[args_count], token, MAXLINE - 1);
+        input_args[args_count][MAXLINE - 1] = '\0';
+        token = strtok(NULL, del_type);
+        args_count++;
+    }
+}
 
 char files_dirs[MAXFILES][MAXLINE] = {0};
 
@@ -102,13 +118,22 @@ int main() {
         printf("> ");
         if (fgets(input, sizeof(input), stdin) == NULL) return -1;
         input[strcspn(input, "\n")] = '\0';
-        if (get_dir(input, dir, sizeof(dir)) == 0) {
-            if (check_dir(dir) != 0) {
+        parse_args(input);
+        if (strncmp(input_args[0], "ls", 2) == 0) {
+            char *target_dir = (args_count > 1) ? input_args[1] : ".";
+            if (check_dir(target_dir) != 0) {
                 printf("Not directory\n");
                 continue;
-            } 
-            int len = list_current_dir(files_dirs, dir);
-        } else {
+            }
+            int len = list_current_dir(files_dirs, target_dir);
+        }  else if (strncmp(input_args[0], "cd", 2) == 0) {
+            printf("You chose 'cd'\n");
+            printf("Args: ");
+            for (int i = 1; i < args_count; i++) {
+                printf("%s ", input_args[i]);
+            }
+        }
+        else {
             printf("Unknown command\n");
         }
         
