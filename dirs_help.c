@@ -59,3 +59,4 @@ void normalize_path(char *path) {
     }
     *write = '\0';
 }
+

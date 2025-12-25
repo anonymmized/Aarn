@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <dirent.h>
+#include <unistd.h>
 #include "dirs_help.h"
 
 #define MAXFILES 500
@@ -11,8 +12,36 @@
 #define MAXARGS 50
 
 char input_args[MAXARGS][MAXLINE] = {0};
+char path_tilde[MAXLINE];
 int args_count = 0;
 const char *del_type = " ";
+
+char *get_current(void) {
+    char *home = getenv("HOME");
+    if (home == NULL) {
+        home = "";
+    }
+    char cwd[MAX_PATH];
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+        perror("getcwd failed");
+        return NULL;
+    }
+    size_t home_len = strlen(home);
+    if (home_len > 0 && strncmp(cwd, home, home_len) == 0) {
+        if (cwd[home_len] == '\0' || cwd[home_len] == '/')  {
+            char *result = malloc(MAXLINE);
+            if (!result) return NULL;
+            if (cwd[home_len] == '\0') {
+                strncpy(result, "~", MAXLINE - 1);
+            } else {
+                snprintf(result, MAXLINE, "~%s", cwd + home_len);
+            }
+            result[MAXLINE - 1] = '\0';
+            return result;
+        }
+    }
+    return strdup(cwd);
+}
 
 void parse_args(char *input) {
     args_count = 0;
@@ -73,48 +102,13 @@ int parse_command(char *filepath) {
     return 0;
 }
 
-int m_getline(char *line, int lim) {
-    int i = 0;
-    int c;
-    while (--lim > 0 && (c = getchar()) != EOF && c != '\n') {
-        line[i++] = c;
-    }
-    if (c == '\n') {
-        line[i++] = '\n';
-    }
-    line[i] = '\0';
-    return i;
-}
-
-int get_dir(const char *input, char *dir, size_t dir_len) {
-    const char *p = input;
-    if (strncmp(p, "ls", 2) != 0) {
-        return -1;
-    }
-
-    if (p[2] == '\0' || p[2] == '\n') {
-        dir[0] = '.';
-        dir[1] = '\0';
-        return 0;
-    }
-
-    p += 2;
-    size_t i = 0;
-    while (*p == ' ') p++;
-    while (*p != '\0' && i + 1 < dir_len) {
-        dir[i] = *p;
-        p++;
-        i++;
-    }
-    dir[i] = '\0';
-    return 0;
-}
-
 int main() {
     char input[MAXLINE];
     char dir[MAXLINE];
-
+    char *cur_dir;
     while (1) {
+        cur_dir = get_current();
+        printf("[%s]\n", cur_dir);
         printf("> ");
         if (fgets(input, sizeof(input), stdin) == NULL) return -1;
         input[strcspn(input, "\n")] = '\0';
