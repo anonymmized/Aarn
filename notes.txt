@@ -1,0 +1,11 @@
+parse commands:
+    1) need to add a function that will parse a commands:
+        - pick a command name, arguments (like -l, --help etc.), main arguments (../) 
+                                                            to a char **
+            example: ls -la ../ char *line_commands[] = ["ls", "-la", "../"]
+                      |   |   |  then it could be parsed by another function
+                  command ^   ^
+                     arguments^
+                         main argument
+    2) need to create function that returns number, that equals a command CMD_LS = 2, CMD_EXIT = 3. CMD_PWD = 4 etc. by enum
+
