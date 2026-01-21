@@ -98,6 +98,21 @@ int cmd_cd(const char *path) {
     return 0;
 }
 
+int parse_line(char *line, char **argv, int max) {
+    int argc = 0;
+    line[strcspn(line, "\r\n")] = 0;
+
+    while (*line && argc < max - 1) {
+        while (*line == ' ' || *line == '\t') line++;
+        if (!*line) break;
+
+        argv[argc++] = line;
+        while (*line && *line != ' ' && *line != '\t') line++;
+        if (*line) *line++ = 0;
+    }
+    argv[argc] = NULL;
+    return argc;
+}
 
 int main() {
     printf("> ");
@@ -110,14 +125,13 @@ int main() {
     char line[MAXLINE];
     int len;
     while ((len = get_line(line, MAXLINE)) > 0) {
-        line[strcspn(line, "\r\n")] = '\0';
-        char *s = skip_spaces(line);
-        char *command = s;
-        while (*s && *s != ' ' && *s != '\t' && *s != '\n') s++;
-
-        if (*s) *s++ = '\0';
-
-        char *arg = skip_spaces(s);
+        char *argv[16];
+        int arg_count = parse_line(line, argv, 16);
+        if (arg_count < 1) {
+            printf("\n");
+            continue;
+        }
+        char *command = argv[0];
 
         if (strcmp(command, "exit") == 0) {
             fprintf(stdout, "exit in progress...\n");
@@ -128,11 +142,29 @@ int main() {
                 fprintf(stdout, "%s\n", pwd_v);
             }
         } else if (strcmp(command, "ls") == 0) {
-            list_wd(*arg ? arg : ".");
+            if (arg_count >= 2) {
+                char *arg = argv[1];
+                list_wd(arg);
+            } else {
+                list_wd(".");
+            }
         } else if (strcmp(command, "cd") == 0) {
-            cmd_cd(arg);
+            if (arg_count >= 2) {
+                char *arg = argv[1];
+                cmd_cd(arg);
+            } else {
+                char *arg = "";
+                cmd_cd(arg);
+            }
         } else if (strcmp(command, "clear") == 0) {
             system("clear");
+        }
+
+        if (arg_count > 2) {
+            int i = 2;
+            while (i < arg_count) {
+                printf("unusing argument: %s\n", argv[i++]);
+            }
         }
         printf("> ");
     }
