@@ -13,6 +13,19 @@
 #define ITALIC "\033[3m"
 #define ESC    "\033[0m"
 
+enum Commands {CMD_exit, CMD_pwd, CMD_ls, CMD_cd, CMD_clear};
+typedef struct {
+    const char *name;
+    int id;
+} Cmd;
+static Cmd cmds[] = {
+    {"exit", CMD_exit},
+    {"pwd", CMD_pwd},
+    {"ls", CMD_ls},
+    {"cd", CMD_cd},
+    {"clear", CMD_clear}
+};
+
 char *skip_spaces(char *);
 
 int get_line(char *line, int lim) {
@@ -88,7 +101,7 @@ int cmd_cd(const char *path) {
         fprintf(stderr, "cd: no such file or directory (case mismatch)\n");
         return 1;
     }
-    if (!path || !*path) path = getenv("HOME");
+    if (!path || !*path || *path == ' ') path = getenv("HOME");
     if (!path) return 1;
 
     if (chdir(path) == 1) {
@@ -114,6 +127,20 @@ int parse_line(char *line, char **argv, int max) {
     return argc;
 }
 
+int get_command_id(char *line) {
+    char *argv[16];
+    int arg_count = parse_line(line, argv, 16);
+    if (arg_count < 1) {
+        printf("\n");
+        return -10;
+    }
+    char *command = argv[0];
+    for (int i = 0; i < 5; i++) {
+        if (strcmp(command, cmds[i].name) == 0) return cmds[i].id;
+    }
+    return -1;
+}
+
 int main() {
     printf("> ");
     const char *current_dir;
@@ -126,45 +153,43 @@ int main() {
     int len;
     while ((len = get_line(line, MAXLINE)) > 0) {
         char *argv[16];
-        int arg_count = parse_line(line, argv, 16);
-        if (arg_count < 1) {
-            printf("\n");
-            continue;
-        }
-        char *command = argv[0];
-
-        if (strcmp(command, "exit") == 0) {
-            fprintf(stdout, "exit in progress...\n");
-            break;
-        } else if (strcmp(command, "pwd") == 0) {
-            const char *pwd_v;
-            if ((pwd_v = print_workin()) != NULL) {
-                fprintf(stdout, "%s\n", pwd_v);
+        int argc = parse_line(line, argv, 16);
+        int output_code = get_command_id(line);
+        switch (output_code) {
+            case CMD_exit:
+                fprintf(stdout, "exit in progress...\n");
+                return 0;
+            case CMD_pwd: { 
+                const char *pwd_v;
+                if ((pwd_v = print_workin()) != NULL) {
+                    fprintf(stdout, "%s\n", pwd_v);
+                    break;
+                } else {
+                    perror("pwd");
+                    break;
+                }
             }
-        } else if (strcmp(command, "ls") == 0) {
-            if (arg_count >= 2) {
-                char *arg = argv[1];
-                list_wd(arg);
-            } else {
-                list_wd(".");
-            }
-        } else if (strcmp(command, "cd") == 0) {
-            if (arg_count >= 2) {
-                char *arg = argv[1];
-                cmd_cd(arg);
-            } else {
-                char *arg = "";
-                cmd_cd(arg);
-            }
-        } else if (strcmp(command, "clear") == 0) {
-            system("clear");
-        }
-
-        if (arg_count > 2) {
-            int i = 2;
-            while (i < arg_count) {
-                printf("unusing argument: %s\n", argv[i++]);
-            }
+            case CMD_clear:
+                system("clear");
+                break;
+            case CMD_ls: 
+                if (argc >= 2) {
+                    char *arg = argv[1];
+                    list_wd(arg);
+                    break;
+                } else {
+                    list_wd(".");
+                    break;
+                }
+            case CMD_cd:
+                if (argc >= 2) {
+                    char *arg = argv[1];
+                    cmd_cd(arg);
+                    break;
+                } else {
+                    cmd_cd(" ");
+                    break;
+                }
         }
         printf("> ");
     }

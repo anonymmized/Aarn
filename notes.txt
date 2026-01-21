@@ -1,5 +1,5 @@
 parse commands:
-    1) need to add a function that will parse a commands:
+    done 1) need to add a function that will parse a commands:
         - pick a command name, arguments (like -l, --help etc.), main arguments (../) 
                                                             to a char **
             example: ls -la ../ char *line_commands[] = ["ls", "-la", "../"]
@@ -7,5 +7,26 @@ parse commands:
                   command ^   ^
                      arguments^
                          main argument
-    2) need to create function that returns number, that equals a command CMD_LS = 2, CMD_EXIT = 3. CMD_PWD = 4 etc. by enum
+    done 2) need to create function that returns number, that equals a command CMD_LS = 2, CMD_EXIT = 3. CMD_PWD = 4 etc. by enum
+
+commands:
+    files/dirs:
+        - mkdir, touch, rm
+    open/view:
+        - open, cat, view, edit
+    search:
+        - find, search
+    utils:
+        - help, etc.
+
+features: 
+    - live file preview panel (text, images, archives) with auto refresh on selection
+    - fuzzy search
+    - marks/bookmarks/quick/jumps + nav history
+    - bulk rename tool
+    - trash + undo
+    - background operations
+    - git integration
+    - plugin/hooks system
+    - dual-pane/tabs/splits
 
