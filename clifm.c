@@ -56,33 +56,28 @@ int list_wd(char *dir) {
         fprintf(stderr, "Error with opening dir\n");
         return 1;
     }
-
+    int items_count = 0;
     struct dirent *ent;
+
     while ((ent = readdir(w_dir)) != NULL) {
         if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
-        if (ent->d_type == DT_DIR) {
-            printf(BOLD ITALIC "%s\n" ESC, ent->d_name);
+        items_count += 1;
+    }
+
+    rewinddir(w_dir);
+
+    while ((ent = readdir(w_dir)) != NULL) {
+        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
+        if (items_count < 10) {
+            if (ent->d_type == DT_DIR) fprintf(stdout, "%s ", ent->d_name);
+            else fprintf(stdout, "%s ", ent->d_name);
         } else {
-            printf(DIM "%s\n" ESC, ent->d_name);
+            if (ent->d_type == DT_DIR) fprintf(stdout, "%s\n", ent->d_name);
+            else fprintf(stdout, "%s\n", ent->d_name);
         }
     }
-
+    if (items_count < 8) printf("\n");
     closedir(w_dir);
-    return 0;
-}
-
-int exists_exact_name_cwd(const char *name) {
-    DIR *d = opendir(".");
-    if (!d) return 0;
-
-    struct dirent *ent;
-    while ((ent = readdir(d)) != NULL) {
-        if (strcmp(ent->d_name, name) == 0) {
-            closedir(d);
-            return 1;
-        }
-    }
-    closedir(d);
     return 0;
 }
 
@@ -97,14 +92,10 @@ int dir_exists(const char *path) {
 
    
 int cmd_cd(const char *path) {
-    if (!exists_exact_name_cwd(path) && !strstr(path, "../")) {
-        fprintf(stderr, "cd: no such file or directory (case mismatch)\n");
-        return 1;
-    }
     if (!path || !*path || *path == ' ') path = getenv("HOME");
     if (!path) return 1;
 
-    if (chdir(path) == 1) {
+    if (chdir(path) == -1) {
         perror("cd");
         return 1;
     }
@@ -192,6 +183,7 @@ int main() {
                 }
         }
         printf("> ");
+
     }
     return 0;
 }
