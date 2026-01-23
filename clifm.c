@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <limits.h>
 #include <sys/stat.h>
 
 #define MAXLINE 1024
@@ -41,12 +42,13 @@ int get_line(char *line, int lim) {
 }
 
 const char *print_workin(void) {
-    const char *pwd = getenv("PWD");
-    if (!pwd) {
-        fprintf(stderr, "PWD is not set\n");
+    static char buf[PATH_MAX];
+
+    if (!getcwd(buf, sizeof(buf))) {
+        perror("getcwd");
         return NULL;
     }
-    return pwd;
+    return buf;
 }
 
 int list_wd(char *dir) {
@@ -133,10 +135,8 @@ int get_command_id(char *line) {
 }
 
 const char *return_last_dir(const char *workin) {
-    const char *p = workin;
-    p += strlen(workin);
-    while (*p != '/') p--;
-    return ++p;
+    const char *last = strrchr(workin, '/');
+    return (last && *(last + 1)) ? last + 1 : workin;
 }
 
 int main() {
