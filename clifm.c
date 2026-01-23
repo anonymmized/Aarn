@@ -40,7 +40,7 @@ int get_line(char *line, int lim) {
     return i;
 }
 
-const char *print_workin() {
+const char *print_workin(void) {
     const char *pwd = getenv("PWD");
     if (!pwd) {
         fprintf(stderr, "PWD is not set\n");
@@ -132,8 +132,16 @@ int get_command_id(char *line) {
     return -1;
 }
 
+const char *return_last_dir(const char *workin) {
+    const char *p = workin;
+    p += strlen(workin);
+    while (*p != '/') p--;
+    return ++p;
+}
+
 int main() {
-    printf("> ");
+    const char *workin = return_last_dir(print_workin());
+    printf(BOLD "%s > " ESC, workin);
     const char *current_dir;
     if ((current_dir = print_workin()) == NULL) {
         fprintf(stderr, "Error with opening dir\n");
@@ -176,13 +184,14 @@ int main() {
                 if (argc >= 2) {
                     char *arg = argv[1];
                     cmd_cd(arg);
+                    workin = return_last_dir(print_workin());
                     break;
                 } else {
                     cmd_cd(" ");
                     break;
                 }
         }
-        printf("> ");
+        printf(BOLD "%s > " ESC, workin);
 
     }
     return 0;
