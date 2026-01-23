@@ -69,11 +69,11 @@ int list_wd(char *dir) {
     while ((ent = readdir(w_dir)) != NULL) {
         if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
         if (items_count < 10) {
-            if (ent->d_type == DT_DIR) fprintf(stdout, "%s ", ent->d_name);
-            else fprintf(stdout, "%s ", ent->d_name);
+            if (ent->d_type == DT_DIR) fprintf(stdout, ITALIC BOLD "%s " ESC, ent->d_name);
+            else fprintf(stdout, DIM "%s " ESC, ent->d_name);
         } else {
-            if (ent->d_type == DT_DIR) fprintf(stdout, "%s\n", ent->d_name);
-            else fprintf(stdout, "%s\n", ent->d_name);
+            if (ent->d_type == DT_DIR) fprintf(stdout, ITALIC BOLD "%s\n" ESC, ent->d_name);
+            else fprintf(stdout, DIM "%s\n" ESC, ent->d_name);
         }
     }
     if (items_count < 8) printf("\n");
