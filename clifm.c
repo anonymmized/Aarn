@@ -14,7 +14,7 @@
 #define ITALIC "\033[3m"
 #define ESC    "\033[0m"
 
-enum Commands {CMD_exit, CMD_pwd, CMD_ls, CMD_cd, CMD_clear};
+enum Commands {CMD_exit, CMD_pwd, CMD_ls, CMD_cd, CMD_clear, CMD_cat};
 typedef struct {
     const char *name;
     int id;
@@ -24,7 +24,8 @@ static Cmd cmds[] = {
     {"pwd", CMD_pwd},
     {"ls", CMD_ls},
     {"cd", CMD_cd},
-    {"clear", CMD_clear}
+    {"clear", CMD_clear},
+    {"cat", CMD_cat}
 };
 
 char *skip_spaces(char *);
@@ -78,7 +79,7 @@ int list_wd(char *dir) {
             else fprintf(stdout, DIM "%s\n" ESC, ent->d_name);
         }
     }
-    if (items_count < 8) printf("\n");
+    if (items_count < 10) putchar('\n');
     closedir(w_dir);
     return 0;
 }
@@ -128,7 +129,7 @@ int get_command_id(char *line) {
         return -10;
     }
     char *command = argv[0];
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 6; i++) {
         if (strcmp(command, cmds[i].name) == 0) return cmds[i].id;
     }
     return -1;
@@ -137,6 +138,18 @@ int get_command_id(char *line) {
 const char *return_last_dir(const char *workin) {
     const char *last = strrchr(workin, '/');
     return (last && *(last + 1)) ? last + 1 : workin;
+}
+
+int cat_file(const char *filename) {
+    FILE *fp = fopen(filename, "r");
+    if (!fp) { perror("fopen"); return 1; }
+
+    char buf[MAXLINE];
+    while (fgets(buf, sizeof(buf), fp)) fputs(buf, stdout);
+
+    if (ferror(fp)) { perror("fgets"); fclose(fp); return 1; }
+    fclose(fp);
+    return 0;
 }
 
 int main() {
@@ -153,7 +166,7 @@ int main() {
     while ((len = get_line(line, MAXLINE)) > 0) {
         char *argv[16];
         int argc = parse_line(line, argv, 16);
-        int output_code = get_command_id(line);
+        int output_code = get_command_id(argv[0]);
         switch (output_code) {
             case CMD_exit:
                 fprintf(stdout, "exit in progress...\n");
@@ -190,6 +203,22 @@ int main() {
                     cmd_cd(" ");
                     break;
                 }
+            case CMD_cat:
+                if (argc == 2) {
+                    char *filename = argv[1];
+                    if (cat_file(filename) == 1) {
+                        fprintf(stderr, "Error reading file: %s\n", argv[1]);
+                        break;
+                    }
+                } else {
+                    for (int i = 1; i < argc; i++) {
+                        if (cat_file(argv[i]) != 0) {
+                            fprintf(stderr, "Error reading file: %s\n", argv[i]);
+                            break;
+                        }
+                    } 
+                }
+                break;
         }
         printf(BOLD "%s > " ESC, workin);
 
