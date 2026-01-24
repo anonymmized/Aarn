@@ -14,7 +14,7 @@
 #define ITALIC "\033[3m"
 #define ESC    "\033[0m"
 
-enum Commands {CMD_exit, CMD_pwd, CMD_ls, CMD_cd, CMD_clear, CMD_cat};
+enum Commands {CMD_exit, CMD_pwd, CMD_ls, CMD_cd, CMD_clear, CMD_cat, CMD_rm};
 typedef struct {
     const char *name;
     int id;
@@ -25,7 +25,8 @@ static Cmd cmds[] = {
     {"ls", CMD_ls},
     {"cd", CMD_cd},
     {"clear", CMD_clear},
-    {"cat", CMD_cat}
+    {"cat", CMD_cat},
+    {"rm", CMD_rm}
 };
 
 char *skip_spaces(char *);
@@ -129,7 +130,7 @@ int get_command_id(char *line) {
         return -10;
     }
     char *command = argv[0];
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 7; i++) {
         if (strcmp(command, cmds[i].name) == 0) return cmds[i].id;
     }
     return -1;
@@ -149,6 +150,25 @@ int cat_file(const char *filename) {
 
     if (ferror(fp)) { perror("fgets"); fclose(fp); return 1; }
     fclose(fp);
+    return 0;
+}
+
+int remove_item(const char *name) {
+    int type;
+    struct stat st;
+    if (stat(name, &st) == 0 && S_ISDIR(st.st_mode)) type = 2;
+    else type = 1;
+    if (type == 1) {
+        if (remove(name) != 0) {
+            perror("rm");
+            return 1;
+        } 
+    } else if (type == 2) {
+        if (rmdir(name) != 0) {
+            perror("rm");
+            return 1;
+        }
+    }
     return 0;
 }
 
@@ -217,6 +237,16 @@ int main() {
                             break;
                         }
                     } 
+                }
+                break;
+            case CMD_rm:
+                if (argc == 2) {
+                    const char *name = argv[1];
+                    remove_item(name);
+                } else {
+                    for (int i = 1; i < argc; i++) {
+                        remove_item(argv[i]);
+                    }
                 }
                 break;
         }
