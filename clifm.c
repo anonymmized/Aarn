@@ -14,6 +14,11 @@
 #define ITALIC "\033[3m"
 #define ESC    "\033[0m"
 
+#define RM_I 1
+#define RM_R 2
+
+int remove_dir(const char *name);
+
 enum Commands {CMD_exit, CMD_pwd, CMD_ls, CMD_cd, CMD_clear, CMD_cat, CMD_rm};
 typedef struct {
     const char *name;
@@ -153,14 +158,14 @@ int cat_file(const char *filename) {
     return 0;
 }
 
-int remove_item(const char *name, int  confirm) {
+int remove_item(const char *name, int  confirm, int recursive) {
     int type;
     struct stat st;
     if (confirm == 1) {
         fprintf(stdout, "remove %s? [y|n] ", name);
         char ans[10];
-        scanf("%s", ans);
-        if (strcmp(ans, "y") != 0) {
+        fgets(ans, sizeof(ans), stdin);
+        if (strstr(ans, "y") == 0) {
             return 0;
         }
     }
@@ -172,10 +177,80 @@ int remove_item(const char *name, int  confirm) {
             return 1;
         } 
     } else if (type == 2) {
+        if (recursive == 1) {
+            if (remove_dir(name) == 1) {
+                perror("rm");
+                return 1;
+            }
+            return 0;
+        }
         if (rmdir(name) != 0) {
             perror("rm");
             return 1;
         }
+    }
+    return 0;
+}
+
+int parse_rm_flags(int argc, char **argv, int *start) {
+    int flags = 0;
+    int i = 1;
+    while (i < argc && argv[i][0] == '-' && argv[i][0] != '\0') {
+        for (int j = 1; argv[i][j] != '\0'; j++) {
+            char c = argv[i][j];
+
+            if (c == 'i') flags |= RM_I;
+            else if (c == 'r') flags |= RM_R;
+            else {
+                fprintf(stderr, "rm: unknown option -%c\n", c);
+                return -1;
+            }
+        }
+        i++;
+    }
+    *start = i;
+    return flags;
+}
+
+int remove_dir(const char *dirname) {
+    DIR *g_dir = opendir(dirname);
+    if (!g_dir) {
+        fprintf(stderr, "Error with opening dir\n");
+        return 1;
+    }
+
+    struct dirent *ent;
+    while ((ent = readdir(g_dir)) != NULL) {
+        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
+        char fullpath[PATH_MAX];
+        if (snprintf(fullpath, sizeof(fullpath), "%s/%s", dirname, ent->d_name) >= (int)sizeof(fullpath)) {
+            fprintf(stderr, "path too long\n");
+            closedir(g_dir);
+            return 1;
+        }
+
+        struct stat st;
+        if (lstat(fullpath, &st) == -1) {
+            perror("lstat");
+            continue;
+        }
+
+        if (S_ISDIR(st.st_mode)) {
+            remove_dir(fullpath);
+            if (rmdir(fullpath) == -1) {
+                perror("rmdir");
+            }
+        } else {
+            if (remove(fullpath) != 0) {
+                perror("remove");
+            }
+        }
+    }
+    closedir(g_dir);
+
+    if (rmdir(dirname) == -1) {
+        perror("rmdir");
+        return 1;
     }
     return 0;
 }
@@ -248,18 +323,21 @@ int main() {
                 }
                 break;
             case CMD_rm: {
-                int confirm = 0, start = 1;
-                if (argc >= 2 && strcmp(argv[1], "-i") == 0) {
-                    confirm = 1;
-                    start = 2;
-                }
-                if (argc <= start) {
+                int start = 1;
+
+                int flags = parse_rm_flags(argc, argv, &start);
+                if (flags == -1) break;
+
+                int confirm = (flags & RM_I) != 0;
+                int recursive = (flags & RM_R) != 0;
+
+                if (start >= argc) {
                     fprintf(stderr, "rm: missing operand\n");
                     break;
                 }
 
                 for (int i = start; i < argc; i++) {
-                    remove_item(argv[i], confirm);
+                    remove_item(argv[i], confirm, recursive);
                 }
                 break;
             }
