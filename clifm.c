@@ -17,6 +17,8 @@
 #define RM_I 1
 #define RM_R 2
 
+#define LS_A 1
+
 int remove_dir(const char *name);
 
 enum Commands {CMD_exit, CMD_pwd, CMD_ls, CMD_cd, CMD_clear, CMD_cat, CMD_rm};
@@ -58,7 +60,7 @@ const char *print_workin(void) {
     return buf;
 }
 
-int list_wd(char *dir) {
+int list_wd(char *dir, int hidden) {
     char *new_dir = skip_spaces(dir);
     DIR *w_dir = opendir(new_dir);
     if (!w_dir) {
@@ -76,7 +78,7 @@ int list_wd(char *dir) {
     rewinddir(w_dir);
 
     while ((ent = readdir(w_dir)) != NULL) {
-        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
+        if (!hidden && ent->d_name[0] == '.') continue;
         if (items_count < 10) {
             if (ent->d_type == DT_DIR) fprintf(stdout, ITALIC BOLD "%s " ESC, ent->d_name);
             else fprintf(stdout, DIM "%s " ESC, ent->d_name);
@@ -165,7 +167,7 @@ int remove_item(const char *name, int  confirm, int recursive) {
         fprintf(stdout, "remove %s? [y|n] ", name);
         char ans[10];
         fgets(ans, sizeof(ans), stdin);
-        if (strstr(ans, "y") == 0) {
+        if (strstr(ans, "y") != 0) {
             return 0;
         }
     }
@@ -255,6 +257,24 @@ int remove_dir(const char *dirname) {
     return 0;
 }
 
+int parse_ls_flags(int argc, char **argv, int *start) {
+    int flags = 0;
+    int i = 1;
+    while (i < argc && argv[i][0] == '-' && argv[i][0] != '\0') {
+        for (int j = 1; argv[i][j] != '\0'; j++) {
+            char c = argv[i][j];
+            if (c == 'a') flags |= LS_A;
+            else {
+                fprintf(stderr, "ls: unknown option -%c\n", c);
+                return -1;
+            }
+        }
+        i++;
+    }
+    *start = i;
+    return flags;
+}
+
 int main() {
     const char *workin = return_last_dir(print_workin());
     printf(BOLD "%s > " ESC, workin);
@@ -287,15 +307,21 @@ int main() {
             case CMD_clear:
                 system("clear");
                 break;
-            case CMD_ls: 
-                if (argc >= 2) {
-                    char *arg = argv[1];
-                    list_wd(arg);
-                    break;
-                } else {
-                    list_wd(".");
-                    break;
+            case CMD_ls: { 
+                int start = 1;
+                int flags = parse_ls_flags(argc, argv, &start);
+                if (flags == -1) break;
+
+                int hidden = (flags & LS_A) != 0;
+
+                for (int i = start; i < argc; i++) {
+                    list_wd(argv[i], hidden);
                 }
+                if (argc <= 2) {
+                    list_wd(".", hidden);
+                }
+                break;
+            }
             case CMD_cd:
                 if (argc >= 2) {
                     char *arg = argv[1];
