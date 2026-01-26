@@ -19,6 +19,7 @@
 #define RM_R 2
 #define RM_F 4
 #define RM_INTER 8
+#define RM_V 16
 
 #define LS_A 1
 
@@ -186,7 +187,7 @@ int cat_file(const char *filename) {
     return 0;
 }
 
-int remove_item(const char *name, int confirm, int recursive, int force) {
+int remove_item(const char *name, int confirm, int recursive, int force, int verbose) {
     struct stat st;
     if (confirm == 1) {
         fprintf(stdout, "remove %s? [y|n] ", name);
@@ -209,11 +210,17 @@ int remove_item(const char *name, int confirm, int recursive, int force) {
                 if (!force) perror("rm");
                 return 1;
             }
+            if (verbose) {
+                printf("directory deleted: %s\n", name);
+            }
             return 0;
         }
         if (rmdir(name) != 0) {
             if (!force) perror("rm");
             return 1;
+        }
+        if (verbose) {
+            printf("directory deleted: %s\n", name);
         }
         return 0;
     }
@@ -221,6 +228,9 @@ int remove_item(const char *name, int confirm, int recursive, int force) {
     if (unlink(name) != 0) {
         if (!force) perror("rm");
         return 1;
+    }
+    if (verbose) {
+        printf("file deleted: %s\n", name);
     }
     return 0;
 
@@ -237,6 +247,7 @@ int parse_rm_flags(int argc, char **argv, int *start) {
             else if (c == 'r' || c == 'R') flags |= RM_R;
             else if (c == 'f') flags |= RM_F;
             else if (c == 'I') flags |= RM_INTER;
+            else if (c == 'v') flags |= RM_V;
             else {
                 fprintf(stderr, "rm: unknown option -%c\n", c);
                 return -1;
@@ -392,6 +403,7 @@ int main() {
                 int recursive = (flags & RM_R) != 0;
                 int force = (flags & RM_F) != 0;
                 int interactive = (flags & RM_INTER) != 0;
+                int verbose = (flags & RM_V) != 0;
                 
                 if (force) {
                     confirm = 0;
@@ -417,7 +429,7 @@ int main() {
                 }
 
                 for (int i = start; i < argc; i++) {
-                    remove_item(argv[i], confirm, recursive, force, interactive);
+                    remove_item(argv[i], confirm, recursive, force, verbose);
                 }
                 break;
             }
