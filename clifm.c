@@ -186,9 +186,8 @@ int cat_file(const char *filename) {
     return 0;
 }
 
-int remove_item(const char *name, int confirm, int recursive, int force, int interactive) {
+int remove_item(const char *name, int confirm, int recursive, int force) {
     struct stat st;
-    if (force) confirm = 0;
     if (confirm == 1) {
         fprintf(stdout, "remove %s? [y|n] ", name);
         char ans[10];
@@ -393,15 +392,20 @@ int main() {
                 int recursive = (flags & RM_R) != 0;
                 int force = (flags & RM_F) != 0;
                 int interactive = (flags & RM_INTER) != 0;
+                
+                if (force) {
+                    confirm = 0;
+                    interactive = 0;
+                }
 
                 if (start >= argc) {
                     fprintf(stderr, "rm: missing operand\n");
                     break;
                 }
-
-                if (interactive && argc > 5) {
+                int targets = argc - start;
+                if (interactive && (recursive || targets > 3)) {
                     printf("remove: ");
-                    for (int i = 2; i < argc; i++) {
+                    for (int i = start; i < argc; i++) {
                         printf("%s ", argv[i]);
                     }
                     printf("[y|n] ");
