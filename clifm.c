@@ -18,6 +18,7 @@
 #define RM_I 1
 #define RM_R 2
 #define RM_F 4
+#define RM_INTER 8
 
 #define LS_A 1
 
@@ -38,7 +39,30 @@ static Cmd cmds[] = {
     {"rm", CMD_rm}
 };
 
+typedef struct {
+    int files;
+    int dirs;
+} Count;
+
 char *skip_spaces(char *);
+
+Count dir_items(const char *dirname) {
+    Count c = {0, 0};
+
+    DIR *w_dir = opendir(dirname);
+    if (!w_dir) {
+        return c;
+    }
+
+    struct dirent *ent;
+    while ((ent = readdir(w_dir)) != NULL) {
+        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
+        if (ent->d_type == DT_DIR) c.dirs++;
+        else c.files++;
+    }
+    closedir(w_dir);
+    return c;
+}
 
 int get_line(char *line, int lim) {
     int c, i = 0;
@@ -162,7 +186,7 @@ int cat_file(const char *filename) {
     return 0;
 }
 
-int remove_item(const char *name, int  confirm, int recursive, int force) {
+int remove_item(const char *name, int confirm, int recursive, int force, int interactive) {
     struct stat st;
     if (force) confirm = 0;
     if (confirm == 1) {
@@ -213,6 +237,7 @@ int parse_rm_flags(int argc, char **argv, int *start) {
             if (c == 'i') flags |= RM_I;
             else if (c == 'r' || c == 'R') flags |= RM_R;
             else if (c == 'f') flags |= RM_F;
+            else if (c == 'I') flags |= RM_INTER;
             else {
                 fprintf(stderr, "rm: unknown option -%c\n", c);
                 return -1;
@@ -367,14 +392,28 @@ int main() {
                 int confirm = (flags & RM_I) != 0;
                 int recursive = (flags & RM_R) != 0;
                 int force = (flags & RM_F) != 0;
+                int interactive = (flags & RM_INTER) != 0;
 
                 if (start >= argc) {
                     fprintf(stderr, "rm: missing operand\n");
                     break;
                 }
 
+                if (interactive && argc > 5) {
+                    printf("remove: ");
+                    for (int i = 2; i < argc; i++) {
+                        printf("%s ", argv[i]);
+                    }
+                    printf("[y|n] ");
+                    char ans[10];
+                    fgets(ans, sizeof(ans), stdin);
+                    if (ans[0] != 'y' && ans[0] != 'Y') {
+                        break;
+                    }
+                }
+
                 for (int i = start; i < argc; i++) {
-                    remove_item(argv[i], confirm, recursive, force);
+                    remove_item(argv[i], confirm, recursive, force, interactive);
                 }
                 break;
             }
