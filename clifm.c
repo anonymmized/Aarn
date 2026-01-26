@@ -4,6 +4,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <limits.h>
+#include <errno.h>
 #include <sys/stat.h>
 
 #define MAXLINE 1024
@@ -16,6 +17,7 @@
 
 #define RM_I 1
 #define RM_R 2
+#define RM_F 4
 
 #define LS_A 1
 
@@ -160,38 +162,45 @@ int cat_file(const char *filename) {
     return 0;
 }
 
-int remove_item(const char *name, int  confirm, int recursive) {
-    int type;
+int remove_item(const char *name, int  confirm, int recursive, int force) {
     struct stat st;
+    if (force) confirm = 0;
     if (confirm == 1) {
         fprintf(stdout, "remove %s? [y|n] ", name);
         char ans[10];
         fgets(ans, sizeof(ans), stdin);
-        if (strstr(ans, "y") == 0) {
+        if (ans[0] != 'y' && ans[0] != 'Y') {
             return 0;
         }
     }
-    if (stat(name, &st) == 0 && S_ISDIR(st.st_mode)) type = 2;
-    else type = 1;
-    if (type == 1) {
-        if (remove(name) != 0) {
-            perror("rm");
-            return 1;
-        } 
-    } else if (type == 2) {
-        if (recursive == 1) {
-            if (remove_dir(name) == 1) {
-                perror("rm");
+
+    if (lstat(name, &st) != 0) {
+        if (force && errno == ENOENT) return 0;
+        if (!force) perror("rm");
+        return 1;
+    }
+
+    if (S_ISDIR(st.st_mode)) {
+        if (recursive) {
+            if (remove_dir(name) != 0) {
+                if (!force) perror("rm");
                 return 1;
             }
             return 0;
         }
         if (rmdir(name) != 0) {
-            perror("rm");
+            if (!force) perror("rm");
             return 1;
         }
+        return 0;
+    }
+
+    if (unlink(name) != 0) {
+        if (!force) perror("rm");
+        return 1;
     }
     return 0;
+
 }
 
 int parse_rm_flags(int argc, char **argv, int *start) {
@@ -203,6 +212,7 @@ int parse_rm_flags(int argc, char **argv, int *start) {
 
             if (c == 'i') flags |= RM_I;
             else if (c == 'r' || c == 'R') flags |= RM_R;
+            else if (c == 'f') flags |= RM_F;
             else {
                 fprintf(stderr, "rm: unknown option -%c\n", c);
                 return -1;
@@ -356,6 +366,7 @@ int main() {
 
                 int confirm = (flags & RM_I) != 0;
                 int recursive = (flags & RM_R) != 0;
+                int force = (flags & RM_F) != 0;
 
                 if (start >= argc) {
                     fprintf(stderr, "rm: missing operand\n");
@@ -363,7 +374,7 @@ int main() {
                 }
 
                 for (int i = start; i < argc; i++) {
-                    remove_item(argv[i], confirm, recursive);
+                    remove_item(argv[i], confirm, recursive, force);
                 }
                 break;
             }
