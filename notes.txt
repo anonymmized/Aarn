@@ -1,14 +1,3 @@
-parse commands:
-    done 1) need to add a function that will parse a commands:
-        - pick a command name, arguments (like -l, --help etc.), main arguments (../) 
-                                                            to a char **
-            example: ls -la ../ char *line_commands[] = ["ls", "-la", "../"]
-                      |   |   |  then it could be parsed by another function
-                  command ^   ^
-                     arguments^
-                         main argument
-    done 2) need to create function that returns number, that equals a command CMD_LS = 2, CMD_EXIT = 3. CMD_PWD = 4 etc. by enum
-
 commands:
     files/dirs:
         - mkdir, touch, rm
@@ -18,6 +7,9 @@ commands:
         - find, search
     utils:
         - help, etc.
+
+architecture:
+    - move the corresponding functions to different files
 
 features: 
     - live file preview panel (text, images, archives) with auto refresh on selection

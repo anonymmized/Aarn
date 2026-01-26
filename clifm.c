@@ -167,7 +167,7 @@ int remove_item(const char *name, int  confirm, int recursive) {
         fprintf(stdout, "remove %s? [y|n] ", name);
         char ans[10];
         fgets(ans, sizeof(ans), stdin);
-        if (strstr(ans, "y") != 0) {
+        if (strstr(ans, "y") == 0) {
             return 0;
         }
     }
@@ -202,7 +202,7 @@ int parse_rm_flags(int argc, char **argv, int *start) {
             char c = argv[i][j];
 
             if (c == 'i') flags |= RM_I;
-            else if (c == 'r') flags |= RM_R;
+            else if (c == 'r' || c == 'R') flags |= RM_R;
             else {
                 fprintf(stderr, "rm: unknown option -%c\n", c);
                 return -1;
