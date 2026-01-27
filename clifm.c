@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <errno.h>
+#include "../headers/utils.h"
 #include <sys/stat.h>
 
 #define MAXLINE 1024
@@ -24,7 +25,7 @@
 #define LS_A 1
 
 int remove_dir(const char *name);
-
+/*
 enum Commands {CMD_exit, CMD_pwd, CMD_ls, CMD_cd, CMD_clear, CMD_cat, CMD_rm};
 typedef struct {
     const char *name;
@@ -76,6 +77,7 @@ int get_line(char *line, int lim) {
     line[i] = '\0';
     return i;
 }
+*/
 
 const char *print_workin(void) {
     static char buf[PATH_MAX];
@@ -118,7 +120,7 @@ int list_wd(char *dir, int hidden) {
     closedir(w_dir);
     return 0;
 }
-
+/*
 char *skip_spaces(char *s) {
     while (*s == ' ' || *s == '\t') s++;                                                 return s;
 }
@@ -127,7 +129,7 @@ int dir_exists(const char *path) {
     struct stat st;
     return (stat(path, &st) == 0) && S_ISDIR(st.st_mode);
 }
-
+*/
    
 int cmd_cd(const char *path) {
     if (!path || !*path || *path == ' ') path = getenv("HOME");
@@ -139,7 +141,7 @@ int cmd_cd(const char *path) {
     }
     return 0;
 }
-
+/*
 int parse_line(char *line, char **argv, int max) {
     int argc = 0;
     line[strcspn(line, "\r\n")] = 0;
@@ -174,6 +176,7 @@ const char *return_last_dir(const char *workin) {
     const char *last = strrchr(workin, '/');
     return (last && *(last + 1)) ? last + 1 : workin;
 }
+*/
 
 int cat_file(const char *filename) {
     FILE *fp = fopen(filename, "r");

@@ -8,15 +8,7 @@ typedef struct {
     int id;
 } Cmd;
 
-static Cmd cmds[] = {
-    {"exit", CMD_exit},
-    {"pwd", CDM_pwd},
-    {"ls", CMD_ls},
-    {"cd", CMD_cd},
-    {"clear", CMD_clear},
-    {"cat", CMD_cat},
-    {"rm", CMD_rm}
-}
+extern Cmd cmds[];
 
 typedef struct {
     int files;
@@ -29,6 +21,6 @@ int dir_exists(const char *path);
 int parse_line(char *line, char **argv, int max);
 int get_command_id(char *line);
 const char *return_last_dir(const char *workin);
-
+Count dir_items(const char *dirname);
 
 #endif
