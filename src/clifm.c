@@ -5,223 +5,21 @@
 #include <unistd.h>
 #include <limits.h>
 #include <errno.h>
-#include "../headers/utils.h"
 #include <sys/stat.h>
 
+#include "../headers/utils.h"
+#include "../headers/pwd.h"
+#include "../headers/cd.h"
+#include "../headers/cat.h"
+#include "../headers/list.h"
+#include "../headers/rm.h"
+
 #define MAXLINE 1024
-#define DIR_LEN 128
 
 #define BOLD   "\033[1m"
 #define DIM    "\033[2m"
 #define ITALIC "\033[3m"
 #define ESC    "\033[0m"
-
-#define RM_I 1
-#define RM_R 2
-#define RM_F 4
-#define RM_INTER 8
-#define RM_V 16
-
-#define LS_A 1
-
-int remove_dir(const char *name);
-
-const char *print_workin(void) {
-    static char buf[PATH_MAX];
-
-    if (!getcwd(buf, sizeof(buf))) {
-        perror("getcwd");
-        return NULL;
-    }
-    return buf;
-}
-
-int list_wd(char *dir, int hidden) {
-    char *new_dir = skip_spaces(dir);
-    DIR *w_dir = opendir(new_dir);
-    if (!w_dir) {
-        fprintf(stderr, "Error with opening dir\n");
-        return 1;
-    }
-    int items_count = 0;
-    struct dirent *ent;
-
-    while ((ent = readdir(w_dir)) != NULL) {
-        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
-        items_count += 1;
-    }
-
-    rewinddir(w_dir);
-
-    while ((ent = readdir(w_dir)) != NULL) {
-        if (!hidden && ent->d_name[0] == '.') continue;
-        if (items_count < 10) {
-            if (ent->d_type == DT_DIR) fprintf(stdout, ITALIC BOLD "%s " ESC, ent->d_name);
-            else fprintf(stdout, DIM "%s " ESC, ent->d_name);
-        } else {
-            if (ent->d_type == DT_DIR) fprintf(stdout, ITALIC BOLD "%s\n" ESC, ent->d_name);
-            else fprintf(stdout, DIM "%s\n" ESC, ent->d_name);
-        }
-    }
-    if (items_count < 10) putchar('\n');
-    closedir(w_dir);
-    return 0;
-}
-int cmd_cd(const char *path) {
-    if (!path || !*path || *path == ' ') path = getenv("HOME");
-    if (!path) return 1;
-
-    if (chdir(path) == -1) {
-        perror("cd");
-        return 1;
-    }
-    return 0;
-}
-
-int cat_file(const char *filename) {
-    FILE *fp = fopen(filename, "r");
-    if (!fp) { perror("fopen"); return 1; }
-
-    char buf[MAXLINE];
-    while (fgets(buf, sizeof(buf), fp)) fputs(buf, stdout);
-
-    if (ferror(fp)) { perror("fgets"); fclose(fp); return 1; }
-    fclose(fp);
-    return 0;
-}
-
-int remove_item(const char *name, int confirm, int recursive, int force, int verbose) {
-    struct stat st;
-    if (confirm == 1) {
-        fprintf(stdout, "remove %s? [y|n] ", name);
-        char ans[10];
-        fgets(ans, sizeof(ans), stdin);
-        if (ans[0] != 'y' && ans[0] != 'Y') {
-            return 0;
-        }
-    }
-
-    if (lstat(name, &st) != 0) {
-        if (force && errno == ENOENT) return 0;
-        if (!force) perror("rm");
-        return 1;
-    }
-
-    if (S_ISDIR(st.st_mode)) {
-        if (recursive) {
-            if (remove_dir(name) != 0) {
-                if (!force) perror("rm");
-                return 1;
-            }
-            if (verbose) {
-                printf("directory deleted: %s\n", name);
-            }
-            return 0;
-        }
-        if (rmdir(name) != 0) {
-            if (!force) perror("rm");
-            return 1;
-        }
-        if (verbose) {
-            printf("directory deleted: %s\n", name);
-        }
-        return 0;
-    }
-
-    if (unlink(name) != 0) {
-        if (!force) perror("rm");
-        return 1;
-    }
-    if (verbose) {
-        printf("file deleted: %s\n", name);
-    }
-    return 0;
-
-}
-
-int parse_rm_flags(int argc, char **argv, int *start) {
-    int flags = 0;
-    int i = 1;
-    while (i < argc && argv[i][0] == '-' && argv[i][0] != '\0') {
-        for (int j = 1; argv[i][j] != '\0'; j++) {
-            char c = argv[i][j];
-
-            if (c == 'i') flags |= RM_I;
-            else if (c == 'r' || c == 'R') flags |= RM_R;
-            else if (c == 'f') flags |= RM_F;
-            else if (c == 'I') flags |= RM_INTER;
-            else if (c == 'v') flags |= RM_V;
-            else {
-                fprintf(stderr, "rm: unknown option -%c\n", c);
-                return -1;
-            }
-        }
-        i++;
-    }
-    *start = i;
-    return flags;
-}
-
-int remove_dir(const char *dirname) {
-    DIR *g_dir = opendir(dirname);
-    if (!g_dir) {
-        fprintf(stderr, "Error with opening dir\n");
-        return 1;
-    }
-
-    struct dirent *ent;
-    while ((ent = readdir(g_dir)) != NULL) {
-        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
-        char fullpath[PATH_MAX];
-        if (snprintf(fullpath, sizeof(fullpath), "%s/%s", dirname, ent->d_name) >= (int)sizeof(fullpath)) {
-            fprintf(stderr, "path too long\n");
-            closedir(g_dir);
-            return 1;
-        }
-
-        struct stat st;
-        if (lstat(fullpath, &st) == -1) {
-            perror("lstat");
-            continue;
-        }
-
-        if (S_ISDIR(st.st_mode)) {
-            remove_dir(fullpath);
-            if (rmdir(fullpath) == -1) {
-                perror("rmdir");
-            }
-        } else {
-            if (remove(fullpath) != 0) {
-                perror("remove");
-            }
-        }
-    }
-    closedir(g_dir);
-
-    if (rmdir(dirname) == -1) {
-        perror("rmdir");
-        return 1;
-    }
-    return 0;
-}
-
-int parse_ls_flags(int argc, char **argv, int *start) {
-    int flags = 0;
-    int i = 1;
-    while (i < argc && argv[i][0] == '-' && argv[i][0] != '\0') {
-        for (int j = 1; argv[i][j] != '\0'; j++) {
-            char c = argv[i][j];
-            if (c == 'a') flags |= LS_A;
-            else {
-                fprintf(stderr, "ls: unknown option -%c\n", c);
-                return -1;
-            }
-        }
-        i++;
-    }
-    *start = i;
-    return flags;
-}
 
 int main() {
     const char *workin = return_last_dir(print_workin());
@@ -338,7 +136,6 @@ int main() {
             }
         }
         printf(BOLD "%s > " ESC, workin);
-
     }
     return 0;
 }
