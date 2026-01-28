@@ -17,6 +17,7 @@ int list_wd(char *dir, int hidden) {
 
     while ((ent = readdir(w_dir)) != NULL) {
         if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
+        if (!hidden && ent->d_name[0] == '.') continue;
         items_count += 1;
     }
 

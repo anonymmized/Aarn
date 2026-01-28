@@ -13,6 +13,7 @@
 #include "../headers/cat.h"
 #include "../headers/list.h"
 #include "../headers/rm.h"
+#include "../headers/mkdir.h"
 
 #define MAXLINE 1024
 
@@ -59,12 +60,16 @@ int main() {
                 if (flags == -1) break;
 
                 int hidden = (flags & LS_A) != 0;
-
-                for (int i = start; i < argc; i++) {
-                    list_wd(argv[i], hidden);
-                }
-                if (argc <= 2) {
+                if (start >= argc) {
                     list_wd(".", hidden);
+                } else {
+                    for (int i = start; i < argc; i++) {
+                        if (argc - start > 1) {
+                            printf("%s:\n", argv[i]);
+                        }
+                        list_wd(argv[i], hidden);
+                        if (i + 1 < argc) putchar('\n');
+                    }
                 }
                 break;
             }
@@ -134,6 +139,11 @@ int main() {
                 }
                 break;
             }
+            case CMD_mkdir:
+                for (int i = 1; i < argc; i++) {
+                    create_dir(argv[i]);
+                }
+                break;
         }
         printf(BOLD "%s > " ESC, workin);
     }
