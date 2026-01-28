@@ -144,6 +144,9 @@ int main() {
                     create_dir(argv[i]);
                 }
                 break;
+            default:
+                printf("command not found: %s\n", argv[0]);
+                break;
         }
         printf(BOLD "%s > " ESC, workin);
     }
