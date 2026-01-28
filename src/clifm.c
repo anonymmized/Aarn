@@ -22,6 +22,8 @@
 #define ITALIC "\033[3m"
 #define ESC    "\033[0m"
 
+
+
 int main() {
     const char *workin = return_last_dir(print_workin());
     printf(BOLD "%s > " ESC, workin);
