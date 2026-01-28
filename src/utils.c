@@ -11,7 +11,8 @@ Cmd cmds[] = {
     {"cd", CMD_cd},
     {"clear", CMD_clear},
     {"cat", CMD_cat},
-    {"rm", CMD_rm}
+    {"rm", CMD_rm},
+    {"mkdir", CMD_mkdir}
 };
 
 int get_line(char *line, int lim) {
@@ -59,7 +60,7 @@ int get_command_id(char *line) {
         return -10;
     }
     char *command = argv[0];
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 8; i++) {
         if (strcmp(command, cmds[i].name) == 0) return cmds[i].id;
     }
     return -1;

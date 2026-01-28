@@ -1,7 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-enum Commands {CMD_exit, CMD_pwd, CMD_ls, CMD_cd, CMD_clear, CMD_cat, CMD_rm};
+enum Commands {CMD_exit, CMD_pwd, CMD_ls, CMD_cd, CMD_clear, CMD_cat, CMD_rm, CMD_mkdir};
 
 typedef struct {
     const char *name;
