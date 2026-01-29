@@ -5,7 +5,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
-int create_dir(char *path, int recursive, mode_t perms) {
+int create_dir(char *path, int recursive, mode_t perms, int verbose) {
     path[strcspn(path, "\r\n")] = '\0';
     if (!recursive) {
         if (perms) {
@@ -18,6 +18,9 @@ int create_dir(char *path, int recursive, mode_t perms) {
                 perror("mkdir");
                 return 1;
             }
+        }
+        if (verbose) {
+            printf("%s\n", path);
         }
         return 0;
     }
@@ -40,6 +43,9 @@ int create_dir(char *path, int recursive, mode_t perms) {
                     }
                 }
             }
+            if (verbose) {
+                printf("%s\n", dir_path);
+            }
             *p = '/';
         }
     }
@@ -56,6 +62,9 @@ int create_dir(char *path, int recursive, mode_t perms) {
             }
         }
     } 
+    if (verbose) {
+        printf("%s\n", dir_path);
+    }
     return 0;
 }
 
@@ -67,6 +76,7 @@ int parse_mkdir_flags(int argc, char **argv, int *start) {
             char c = argv[i][j];
             if (c == 'p') flags |= MKDIR_P;
             else if (c == 'm') flags |= MKDIR_M;
+            else if (c == 'v') flags |= MKDIR_V;
             else {
                 fprintf(stderr, "mkdir: unknown option -%c\n", c);
                 return -1;

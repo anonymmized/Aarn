@@ -148,6 +148,8 @@ int main() {
                 
                 int perms = (flags & MKDIR_M) != 0;
                 int recursive = (flags & MKDIR_P) != 0;
+                int verbose = (flags & MKDIR_V) != 0;
+
                 mode_t mode_perms = 0;   
                 if (perms) {
                     char perms_str[10];
@@ -156,7 +158,7 @@ int main() {
                     start++;
                 }
                 for (int i = start; i < argc; i++) {
-                    create_dir(argv[i], recursive, mode_perms);
+                    create_dir(argv[i], recursive, mode_perms, verbose);
                 }
                 break;
             }
