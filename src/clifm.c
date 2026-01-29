@@ -141,11 +141,18 @@ int main() {
                 }
                 break;
             }
-            case CMD_mkdir:
-                for (int i = 1; i < argc; i++) {
-                    create_dir(argv[i]);
+            case CMD_mkdir: {
+                int start = 1;
+                int flags = parse_mkdir_flags(argc, argv, &start);
+                if (flags == -1) break;
+
+                int recursive = (flags & MKDIR_P) != 0;
+                for (int i = start; i < argc; i++) {
+                    create_dir(argv[i], recursive);
+                    i++;
                 }
                 break;
+            }
             default:
                 printf("command not found: %s\n", argv[0]);
                 break;

@@ -79,7 +79,7 @@ int remove_dir(const char *dirname) {
 
         if (S_ISDIR(st.st_mode)) {
             remove_dir(fullpath);
-            if (rmdir(fullpath) == -1) {
+            if (rmdir(fullpath) == 1) {
                 perror("rmdir");
             }
         } else {
