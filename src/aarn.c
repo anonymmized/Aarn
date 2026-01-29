@@ -15,6 +15,7 @@
 #include "../headers/rm.h"
 #include "../headers/mkdir.h"
 #include "../helps/helps.h"
+#include "../helps/ascii.h"
 
 #define MAXLINE 1024
 
@@ -26,6 +27,7 @@
 
 
 int main() {
+    print_ascii_name();
     const char *workin = return_last_dir(print_workin());
     printf(BOLD "%s > " ESC, workin);
     const char *current_dir;
