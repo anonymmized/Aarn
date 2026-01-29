@@ -14,6 +14,7 @@
 #include "../headers/list.h"
 #include "../headers/rm.h"
 #include "../headers/mkdir.h"
+#include "../helps/helps.h"
 
 #define MAXLINE 1024
 
@@ -85,22 +86,26 @@ int main() {
                     cmd_cd(" ");
                     break;
                 }
-            case CMD_cat:
-                if (argc == 2) {
-                    char *filename = argv[1];
-                    if (cat_file(filename) == 1) {
-                        fprintf(stderr, "Error reading file: %s\n", argv[1]);
+            case CMD_cat: {
+                int start = 1;
+                int flags = parse_cat_flags(argc, argv, &start);
+                if (flags == -1) break;
+
+                int help = (flags & CAT_HL) != 0;
+                if (help) {
+                    cat_help();
+                    break;
+                }
+
+
+                for (int i = start; i < argc; i++) {
+                    if (cat_file(argv[i]) != 0) {
+                        fprintf(stderr, "Error reading file: %s\n", argv[i]);
                         break;
                     }
-                } else {
-                    for (int i = 1; i < argc; i++) {
-                        if (cat_file(argv[i]) != 0) {
-                            fprintf(stderr, "Error reading file: %s\n", argv[i]);
-                            break;
-                        }
-                    } 
-                }
+                } 
                 break;
+            }
             case CMD_rm: {
                 int start = 1;
 
