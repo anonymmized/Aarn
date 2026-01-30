@@ -78,16 +78,23 @@ int main() {
                 }
                 break;
             }
-            case CMD_cd:
-                if (argc >= 2) {
-                    char *arg = argv[1];
-                    cmd_cd(arg);
-                    workin = return_last_dir(print_workin());
-                    break;
-                } else {
-                    cmd_cd(" ");
+            case CMD_cd: {
+                int start = 0;
+                int flags = parse_cd_flags(argc, argv, &start);
+                if (flags == -1) break;
+
+                int help = (flags & CD_HL) != 0;
+                if (help) {
+                    cd_help();
                     break;
                 }
+                
+                for (int i = start; i < argc; i++) {
+                    cmd_cd(argv[i]);
+                    workin = return_last_dir(print_workin());
+                }
+                break;
+            }
             case CMD_cat: {
                 int start = 1;
                 int flags = parse_cat_flags(argc, argv, &start);
