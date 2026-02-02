@@ -29,7 +29,6 @@
 int main() {
     print_ascii_name();
     const char *workin = return_last_dir(print_workin());
-    printf(BOLD "%s > " ESC, workin);
     const char *current_dir;
     if ((current_dir = print_workin()) == NULL) {
         fprintf(stderr, "Error with opening dir\n");
@@ -42,6 +41,7 @@ int main() {
     int len;
     enable_raw();
     while (1) {
+        //printf(BOLD "%s > " ESC, workin);
         char *line = read_command_line(history, &hist_index, &hist_len, workin);
         char *argv[16];
         int argc = parse_line(line, argv, 16);
@@ -184,7 +184,6 @@ int main() {
                 printf("command not found: %s\n", argv[0]);
                 break;
         }
-        printf(BOLD "%s > " ESC, workin);
     }
     return 0;
 }

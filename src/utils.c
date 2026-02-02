@@ -33,7 +33,7 @@ char *read_command_line(char **history, int *index, int *history_len, const char
             *index = *history_len;
             len = 0;
             printf("\n");
-            redraw("", workin_dir);
+            //redraw("", workin_dir);
             return buf;
         } else if (c == 127 || c == 8) {
             if (len > 0) {
