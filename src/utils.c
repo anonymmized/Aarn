@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>
+#include <termios.h>
+#include <unistd.h>
 #include "../headers/utils.h"
 #include <sys/stat.h>
 
@@ -14,6 +16,30 @@ Cmd cmds[] = {
     {"rm", CMD_rm},
     {"mkdir", CMD_mkdir}
 };
+
+struct termios orig;
+
+void enable_raw(void) {
+    tcgetattr(STDIN_FILENO, &orig);
+    struct termios raw = orig;
+    raw.c_lflag &= ~(ECHO | ICANON);
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+}
+
+void disable_raw(void) {
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig);
+}
+
+void redraw(const char *buf, char *workin_dir) {
+    printf("\r\033[K%s> %s", workin_dir, buf);
+    fflush(stdout);
+}
+
+void load_string(char **history, int index, char *buf, int *len, char *workin_dir) {
+    strcpy(buf, history[index]);
+    *len = strlen(buf);
+    redraw(buf, workin_dir);
+}
 
 int get_line(char *line, int lim) {
     int c, i = 0;

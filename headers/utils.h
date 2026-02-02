@@ -22,5 +22,9 @@ int parse_line(char *line, char **argv, int max);
 int get_command_id(char *line);
 const char *return_last_dir(const char *workin);
 Count dir_items(const char *dirname);
+void enable_raw(void);
+void disable_raw(void);
+void redraw(const char *buf, char *workin_dir);
+void load_string(char **history, int index, char *buf, int *len, char *workin_dir);
 
 #endif
