@@ -20,7 +20,8 @@ Cmd cmds[] = {
 struct termios orig;
 
 char *read_command_line(char **history, int *index, int *history_len, const char *workin_dir) {
-    redraw("", workin_dir);
+    int mv_l = 0, mv_r = 0;
+    redraw("", workin_dir, mv_r, mv_l);
     static char buf[1024];
     int len = 0;
     while (1) {
@@ -33,14 +34,11 @@ char *read_command_line(char **history, int *index, int *history_len, const char
             *index = *history_len;
             len = 0;
             printf("\n");
-            //redraw("", workin_dir);
             return buf;
         } else if (c == 127 || c == 8) {
-            if (len > 0) {
-                len--;
-                buf[len] = '\0';
-                redraw(buf, workin_dir);
-            }
+            len--;
+            buf[len] = '\0';
+            redraw(buf, workin_dir, mv_r, mv_l);
         } else if (c == '\x1b') {
             char seq[2];
             read(STDIN_FILENO, &seq[0], 1);
@@ -48,24 +46,30 @@ char *read_command_line(char **history, int *index, int *history_len, const char
             if (seq[1] == 'A') {
                 if (*history_len > 0 && *index > 0) {
                     (*index)--;
-                    load_string(history, *index, buf, &len, workin_dir);
+                    load_string(history, *index, buf, &len, workin_dir, mv_r, mv_l);
                 } else if (*index == (*history_len) - 1) {
                     *index = *history_len;
                     len = 0;
                     buf[0] = '\0';
-                    redraw("", workin_dir);
+                    redraw("", workin_dir, mv_r, mv_l);
                 }
             }
             if (seq[1] == 'B') {
                 if (*index < (*history_len) - 1) {
                     (*index)++;
-                    load_string(history, *index, buf, &len, workin_dir);
+                    load_string(history, *index, buf, &len, workin_dir, mv_r, mv_l);
                 } else if (*index == (*history_len) - 1) {
                     *index = *history_len;
                     len = 0;
                     buf[0] = '\0';
-                    redraw("", workin_dir);
+                    redraw("", workin_dir, mv_r, mv_l);
                 }
+            }
+            if (seq[1] == 'C') {
+                redraw(buf, workin_dir, 1, mv_l);
+            }
+            if (seq[1] == 'D') {
+                redraw(buf, workin_dir, mv_r, 1);
             }
         } else {
             buf[len++] = c;
@@ -85,15 +89,25 @@ void disable_raw(void) {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig);
 }
 
-void redraw(const char *buf, const char *workin_dir) {
-    printf("\r\033[K%s> %s", workin_dir, buf);
-    fflush(stdout);
+void redraw(const char *buf, const char *workin_dir, int r, int l) {
+    if (r == 1 && l == 0) {
+        printf("\r\033[K%s> %s",workin_dir, buf);
+        printf("\033[1C");
+        fflush(stdout);
+    } else if (l == 1 && r == 0) {
+        printf("\r\033[K%s> %s", workin_dir, buf);
+        printf("\033[1D");
+        fflush(stdout);
+    } else if (l == 0 && r == 0) {
+        printf("\r\033[K%s> %s", workin_dir, buf);
+        fflush(stdout);
+    }
 }
 
-void load_string(char **history, int index, char *buf, int *len, const char *workin_dir) {
+void load_string(char **history, int index, char *buf, int *len, const char *workin_dir, int r, int l) {
     strcpy(buf, history[index]);
     *len = strlen(buf);
-    redraw(buf, workin_dir);
+    redraw(buf, workin_dir, r, l);
 }
 
 int get_line(char *line, int lim) {

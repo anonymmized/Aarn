@@ -1,544 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
-#include <dirent.h>
-#include <unistd.h>
-#include <limits.h>
-#include <errno.h>
-#include <sys/stat.h>
-
-#include "../headers/utils.h"
-#include "../headers/pwd.h"
-#include "../headers/cd.h"
-#include "../headers/cat.h"
-#include "../headers/list.h"
-#include "../headers/rm.h"
-#include "../headers/mkdir.h"
-#include "../helps/helps.h"
-#include "../helps/ascii.h"
-
-#define MAXLINE 1024
-
-#define BOLD   "\033[1m"
-#define DIM    "\033[2m"
-#define ITALIC "\033[3m"
-#define ESC    "\033[0m"
-
-
-
-int main() {
-    print_ascii_name();
-    const char *workin = return_last_dir(print_workin());
-    const char *current_dir;
-    if ((current_dir = print_workin()) == NULL) {
-        fprintf(stderr, "Error with opening dir\n");
-        return 1;
-    }
-    char *history[100] = {NULL};
-    int hist_index = 0;
-    int hist_len = 0;
-    char *c_d = (char *)current_dir;
-    int len;
-    enable_raw();
-    while (1) {
-        printf(BOLD "%s > " ESC, workin);
-        char *line = read_command_line(history, &hist_index, &hist_len, workin);
-        char *argv[16];
-        int argc = parse_line(line, argv, 16);
-        int output_code = get_command_id(argv[0]);
-        switch (output_code) {
-            case CMD_exit:
-                fprintf(stdout, "exit in progress...\n");
-                return 0;
-            case CMD_pwd: { 
-                const char *pwd_v;
-                if ((pwd_v = print_workin()) != NULL) {
-                    fprintf(stdout, "%s\n", pwd_v);
-                    break;
-                } else {
-                    perror("pwd");
-                    break;
-                }
-            }
-            case CMD_clear:
-                system("clear");
-                break;
-            case CMD_ls: { 
-                int start = 1;
-                int flags = parse_ls_flags(argc, argv, &start);
-                if (flags == -1) break;
-
-                int hidden = (flags & LS_A) != 0;
-                if (start >= argc) {
-                    list_wd(".", hidden);
-                } else {
-                    for (int i = start; i < argc; i++) {
-                        if (argc - start > 1) {
-                            printf("%s:\n", argv[i]);
-                        }
-                        list_wd(argv[i], hidden);
-                        if (i + 1 < argc) putchar('\n');
-                    }
-                }
-                break;
-            }
-            case CMD_cd: {
-                int start = 0;
-                int flags = parse_cd_flags(argc, argv, &start);
-                if (flags == -1) break;
-
-                int help = (flags & CD_HL) != 0;
-                if (help) {
-                    cd_help();
-                    break;
-                }
-                
-                for (int i = start; i < argc; i++) {
-                    cmd_cd(argv[i]);
-                    workin = return_last_dir(print_workin());
-                }
-                break;
-            }
-            case CMD_cat: {
-                int start = 1;
-                int flags = parse_cat_flags(argc, argv, &start);
-                if (flags == -1) break;
-
-                int help = (flags & CAT_HL) != 0;
-                if (help) {
-                    cat_help();
-                    break;
-                }
-
-
-                for (int i = start; i < argc; i++) {
-                    if (cat_file(argv[i]) != 0) {
-                        fprintf(stderr, "Error reading file: %s\n", argv[i]);
-                        break;
-                    }
-                } 
-                break;
-            }
-            case CMD_rm: {
-                int start = 1;
-
-                int flags = parse_rm_flags(argc, argv, &start);
-                if (flags == -1) break;
-
-                int confirm = (flags & RM_I) != 0;
-                int recursive = (flags & RM_R) != 0;
-                int force = (flags & RM_F) != 0;
-                int interactive = (flags & RM_INTER) != 0;
-                int verbose = (flags & RM_V) != 0;
-                
-                if (force) {
-                    confirm = 0;
-                    interactive = 0;
-                }
-
-                if (start >= argc) {
-                    fprintf(stderr, "rm: missing operand\n");
-                    break;
-                }
-                int targets = argc - start;
-                if (interactive && (recursive || targets > 3)) {
-                    printf("remove: ");
-                    for (int i = start; i < argc; i++) {
-                        printf("%s ", argv[i]);
-                    }
-                    printf("[y|n] ");
-                    char ans[10];
-                    fgets(ans, sizeof(ans), stdin);
-                    if (ans[0] != 'y' && ans[0] != 'Y') {
-                        break;
-                    }
-                }
-
-                for (int i = start; i < argc; i++) {
-                    remove_item(argv[i], confirm, recursive, force, verbose);
-                }
-                break;
-            }
-            case CMD_mkdir: {
-                int start = 1;
-                int flags = parse_mkdir_flags(argc, argv, &start);
-                if (flags == -1) break;
-                
-                int perms = (flags & MKDIR_M) != 0;
-                int recursive = (flags & MKDIR_P) != 0;
-                int verbose = (flags & MKDIR_V) != 0;
-
-                mode_t mode_perms = 0;   
-                if (perms) {
-                    char perms_str[10];
-                    strcpy(perms_str, argv[start]);
-                    mode_perms = (mode_t) strtol(perms_str, NULL, 8);
-                    start++;
-                }
-                for (int i = start; i < argc; i++) {
-                    create_dir(argv[i], recursive, mode_perms, verbose);
-                }
-                break;
-            }
-            default:
-                printf("command not found: %s\n", argv[0]);
-                break;
-        }
-    }
-    return 0;
-}
-#include "../headers/cat.h"
-#include "../helps/helps.h"
-#include <stdio.h>
-
-int cat_file(const char *filename) {
-    FILE *fp = fopen(filename, "r");
-    if (!fp) { perror("fopen"); return 1; }
-
-    char buf[MAXLINE];
-    while (fgets(buf, sizeof(buf), fp)) fputs(buf, stdout);
-
-    if (ferror(fp)) {
-        perror("fgets");
-        fclose(fp);
-        return 1;
-    }
-    fclose(fp);
-    return 0;
-}
-
-int parse_cat_flags(int argc, char **argv, int *start) {
-    int flags = 0;
-    int i = 1;
-    while (i < argc && argv[i][0] == '-' && argv[i][0] != '\0') {
-        for (int j = 1; argv[i][j] != '\0'; j++) {
-            char c = argv[i][j];
-            if (c == 'h') flags |= CAT_HL;
-            else {
-                fprintf(stderr, "cat: unknown option -%c\n", c);
-                return -1;
-            }
-        }
-        i++;
-    }
-    *start = i;
-    return flags;
-}
-#include "../headers/cd.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
-int cmd_cd(const char *path) {
-    if (!path || !*path || *path == ' ') path = getenv("HOME");
-    if (!path) return 1;
-
-    if (chdir(path) == -1) {
-        perror("cd");
-        return 1;
-    }
-    return 0;
-}
-
-int parse_cd_flags(int argc, char **argv, int *start) {
-    int flags = 0;
-    int i = 1;
-    while (i < argc && argv[i][0] == '-' && argv[i][0] != '\0') {
-        for (int j = 1; argv[i][j] != '\0'; j++) {
-            char c = argv[i][j];
-            if (c == 'h') flags |= CD_HL;
-            else {
-                fprintf(stderr, "cd: unknown option -%c\n", c);
-                return -1;
-            }
-        }
-        i++;
-    }
-    *start = i;
-    return flags;
-}
-#include "../headers/list.h"
-#include "../headers/utils.h"
-#include <dirent.h>
-#include <string.h>
-#include <stdio.h>
-
-int list_wd(char *dir, int hidden) {
-    char *new_dir = skip_spaces(dir);
-    DIR *w_dir = opendir(new_dir);
-    if (!w_dir) {
-        fprintf(stderr, "Error with opening dir\n");
-        return 1;
-    }
-
-    int items_count = 0;
-    struct dirent *ent;
-
-    while ((ent = readdir(w_dir)) != NULL) {
-        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
-        if (!hidden && ent->d_name[0] == '.') continue;
-        items_count += 1;
-    }
-
-    rewinddir(w_dir);
-    
-    while ((ent = readdir(w_dir)) != NULL) {
-        if (!hidden && ent->d_name[0] == '.') continue;
-        if (items_count < 10) {
-            if (ent->d_type == DT_DIR) fprintf(stdout, ITALIC BOLD "%s " ESC, ent->d_name);
-            else fprintf(stdout, DIM "%s " ESC, ent->d_name);
-        } else {
-            if (ent->d_type == DT_DIR) fprintf(stdout, ITALIC BOLD "%s\n" ESC, ent->d_name);
-            else fprintf(stdout, DIM "%s\n" ESC, ent->d_name);
-        }
-    }
-    if (items_count < 10) putchar('\n');
-    closedir(w_dir);
-    return 0;
-}
-
-int parse_ls_flags(int argc, char **argv, int *start) {
-    int flags = 0;
-    int i = 1;
-    while (i < argc && argv[i][0] == '-' && argv[i][0] != '\0') {
-        for (int j = 1; argv[i][j] != '\0'; j++) {
-            char c = argv[i][j];
-            if (c == 'a') flags |= LS_A;
-            else {
-                fprintf(stdout, "ls: unknown option -%c\n", c);
-                return -1;
-            }
-        }
-        i++;
-    }
-    *start = i;
-    return flags;
-}
-#include "../headers/mkdir.h"
-#include "../headers/utils.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-
-int create_dir(char *path, int recursive, mode_t perms, int verbose) {
-    path[strcspn(path, "\r\n")] = '\0';
-    if (!recursive) {
-        if (perms) {
-            if (mkdir(path, perms) != 0) {
-                perror("mkdir");
-                return 1;
-            }
-        } else {
-            if (mkdir(path, 0755) != 0) {
-                perror("mkdir");
-                return 1;
-            }
-        }
-        if (verbose) {
-            printf("%s\n", path);
-        }
-        return 0;
-    }
-
-    char dir_path[256];
-    strcpy(dir_path, path);
-    for (char *p = dir_path; *p; p++) {
-        if (*p == '/') {
-            *p = '\0';
-            if (!dir_exists(dir_path)) {
-                if (!perms) {
-                    if (mkdir(dir_path, 0755) != 0) {
-                        perror("mkdir");
-                        return 1;
-                    }
-                } else {
-                    if (mkdir(dir_path, perms) != 0) {
-                        perror("mkdir");
-                        return 1;
-                    }
-                }
-            }
-            if (verbose) {
-                printf("%s\n", dir_path);
-            }
-            *p = '/';
-        }
-    }
-    if (!dir_exists(dir_path)) {
-        if (!perms) {
-            if (mkdir(dir_path, 0755) != 0) {
-                perror("mkdir");
-                return 1;
-            }
-        } else {
-            if (mkdir(dir_path, perms) != 0) {
-                perror("mkdir");
-                return 1;
-            }
-        }
-    } 
-    if (verbose) {
-        printf("%s\n", dir_path);
-    }
-    return 0;
-}
-
-int parse_mkdir_flags(int argc, char **argv, int *start) {
-    int flags = 0;
-    int i = 1;
-    while (i < argc && argv[i][0] == '-' && argv[i][0] != '\0') {
-        for (int j = 1; argv[i][j] != '\0'; j++) {
-            char c = argv[i][j];
-            if (c == 'p') flags |= MKDIR_P;
-            else if (c == 'm') flags |= MKDIR_M;
-            else if (c == 'v') flags |= MKDIR_V;
-            else {
-                fprintf(stderr, "mkdir: unknown option -%c\n", c);
-                return -1;
-            }
-        }
-        i++;
-    }
-    *start = i;
-    return flags;
-}
-#include <stdio.h>
-#include <unistd.h>
-#include <limits.h>
-#include "../headers/pwd.h"
-
-const char *print_workin(void) {
-    static char buf[PATH_MAX];
-
-    if (!getcwd(buf, sizeof(buf))) {
-        perror("pwd");
-        return NULL;
-    }
-    return buf;
-}
-
-#include "../headers/rm.h"
-#include <sys/stat.h>
-#include <errno.h>
-#include <stdio.h>
-#include <dirent.h>
-#include <string.h>
-#include <limits.h>
-#include <unistd.h>
-
-
-int remove_item(const char *name, int confirm, int recursive, int force, int verbose) {
-    struct stat st;
-    if (confirm == 1) {
-        fprintf(stdout, "remove %s [y|n] ", name);
-        char ans[10];
-        fgets(ans, sizeof(ans), stdin);
-        if (ans[0] != 'y' && ans[0] != 'Y') return 0;
-    }
-
-    if (lstat(name, &st) != 0) {
-        if (force && errno == ENOENT) return 0;
-        if (!force) perror("rm");
-        return 1;
-    }
-
-    if (S_ISDIR(st.st_mode)) {
-        if (recursive) {
-            if (remove_dir(name) != 0) {
-                if (!force) perror("rm");
-                return 1;
-            }
-            if (verbose) {
-                printf("directory deleted: %s\n", name);
-            }
-            return 0;
-        }
-        if (rmdir(name) != 0) {
-            if (!force) perror("rm");
-            return 1;
-        }
-        if (verbose) {
-            printf("directory deleted: %s\n", name);
-        }
-        return 0;
-    }
-
-    if (unlink(name) != 0) {
-        if (!force) perror("rm");
-        return 1;
-    }
-    if (verbose) {
-        printf("file deleted: %s\n", name);
-    }
-    return 0;
-}
-
-int remove_dir(const char *dirname) {
-    DIR *w_dir = opendir(dirname);
-    if (!w_dir) {
-        fprintf(stderr, "Error with opening dir\n");
-        return 1;
-    }
-
-    struct dirent *ent;
-    while ((ent = readdir(w_dir)) != NULL) {
-        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
-        char fullpath[PATH_MAX];
-        if (snprintf(fullpath, sizeof(fullpath), "%s/%s", dirname, ent->d_name) >= (int)sizeof(fullpath)) {
-            fprintf(stderr, "path too long\n");
-            closedir(w_dir);
-            return 1;
-        }
-
-        struct stat st;
-        if (lstat(fullpath, &st) == -1) {
-            perror("lstat");
-            continue;
-        }
-
-        if (S_ISDIR(st.st_mode)) {
-            remove_dir(fullpath);
-            if (rmdir(fullpath) == 1) {
-                perror("rmdir");
-            }
-        } else {
-            if (remove(fullpath) != 0) {
-                perror("remove");
-            }
-        }
-    }
-    closedir(w_dir);
-    if (rmdir(dirname) == -1) {
-        perror("rmdir");
-        return 1;
-    }
-    return 0;
-}
-
-int parse_rm_flags(int argc, char **argv, int *start) {
-    int flags = 0;
-    int i = 1;
-    while (i < argc && argv[i][0] == '-' && argv[i][0] != '\0') {
-        for (int j = 1; argv[i][j] != '\0'; j++) {
-            char c = argv[i][j];
-            if (c == 'i') flags |= RM_I;
-            else if (c == 'r' || c == 'R') flags |= RM_R;
-            else if (c == 'f') flags |= RM_F;
-            else if (c == 'I') flags |= RM_INTER;
-            else if (c == 'v') flags |= RM_V;
-            else {
-                fprintf(stderr, "rm: unknown option -%c\n", c);
-                return -1;
-            }
-        }
-        i++;
-    }
-    *start = i;
-    return flags;
-}
-#include <stdio.h>
-#include <string.h>
 #include <dirent.h>
 #include <termios.h>
 #include <unistd.h>
@@ -562,6 +23,7 @@ char *read_command_line(char **history, int *index, int *history_len, const char
     redraw("", workin_dir);
     static char buf[1024];
     int len = 0;
+    int cursor_pos;
     while (1) {
         char c;
         read(STDIN_FILENO, &c, 1);
@@ -571,11 +33,13 @@ char *read_command_line(char **history, int *index, int *history_len, const char
             history[(*history_len)++] = strdup(buf);
             *index = *history_len;
             len = 0;
+            cursor_pos = 0;
             printf("\n");
-            redraw("", workin_dir);
+            //redraw("", workin_dir);
             return buf;
         } else if (c == 127 || c == 8) {
-            if (len > 0) {
+            if (cursor_pos > 0 && len > 0) {
+                cursor_pos--;
                 len--;
                 buf[len] = '\0';
                 redraw(buf, workin_dir);
@@ -588,10 +52,12 @@ char *read_command_line(char **history, int *index, int *history_len, const char
                 if (*history_len > 0 && *index > 0) {
                     (*index)--;
                     load_string(history, *index, buf, &len, workin_dir);
+                    cursor_pos = 0;
                 } else if (*index == (*history_len) - 1) {
                     *index = *history_len;
                     len = 0;
                     buf[0] = '\0';
+                    cursor_pos = 0;
                     redraw("", workin_dir);
                 }
             }
@@ -599,16 +65,35 @@ char *read_command_line(char **history, int *index, int *history_len, const char
                 if (*index < (*history_len) - 1) {
                     (*index)++;
                     load_string(history, *index, buf, &len, workin_dir);
+                    cursor_pos = 0;
                 } else if (*index == (*history_len) - 1) {
                     *index = *history_len;
                     len = 0;
                     buf[0] = '\0';
                     redraw("", workin_dir);
+                    cursor_pos = 0;
+                }
+            }
+            if (seq[1] == 'D') {
+                if (cursor_pos > 0) {
+                    cursor_pos--;
+                    printf("\033[1D");
+                }
+            }
+            if (seq[1] == 'C') {
+                if (cursor_pos < len) {
+                    cursor_pos++;
+                    printf("\033[1C");
                 }
             }
         } else {
-            buf[len++] = c;
+            memmove(buf + cursor_pos + 1, buf + cursor_pos, len - cursor_pos);
+            buf[cursor_pos] = c;
+            len++;
+            cursor_pos++;
             write(STDOUT_FILENO, &c, 1);
+            //printf("%c\033[1C", c);
+            
         }
     }
 }
@@ -625,7 +110,7 @@ void disable_raw(void) {
 }
 
 void redraw(const char *buf, const char *workin_dir) {
-    printf("\r\033[K%s", buf);
+    printf("\r\033[K%s> %s", workin_dir, buf);
     fflush(stdout);
 }
 
@@ -707,171 +192,197 @@ Count dir_items(const char *dirname) {
     closedir(w_dir);
     return c;
 }
-#ifndef CAT_H
-#define CAT_H
-
-#define MAXLINE 1024
-
-#define CAT_HL 1
-
-int cat_file(const char *filename);
-int parse_cat_flags(int argc, char **argv, int *start);
-
-#endif
-#ifndef CD_H
-#define CD_H
-
-#define CD_HL 1
-
-int cmd_cd(const char *path);
-int parse_cd_flags(int argc, char **argv, int *start);
-
-#endif
-#ifndef LIST_H
-#define LIST_H
-
-#define BOLD   "\033[1m"
-#define DIM    "\033[2m"
-#define ITALIC "\033[3m"
-#define ESC    "\033[0m"
-
-#define LS_A 1
-
-int list_wd(char *dir, int hidden);
-
-int parse_ls_flags(int argc, char **argv, int *start);
-
-#endif
-#ifndef MKDIR_H
-#define MKDIR_H
-
+#include <stdio.h>
+#include <string.h>
+#include <dirent.h>
+#include <termios.h>
+#include <unistd.h>
+#include "../headers/utils.h"
 #include <sys/stat.h>
 
-#define MKDIR_P 1
-#define MKDIR_M 2
-#define MKDIR_V 4
+Cmd cmds[] = {
+    {"exit", CMD_exit},
+    {"pwd", CMD_pwd},
+    {"ls", CMD_ls},
+    {"cd", CMD_cd},
+    {"clear", CMD_clear},
+    {"cat", CMD_cat},
+    {"rm", CMD_rm},
+    {"mkdir", CMD_mkdir}
+};
 
-int create_dir(char *path, int recursive, mode_t perms, int verbose);
-int parse_mkdir_flags(int argc, char **argv, int *start);
+struct termios orig;
 
-#endif
-#ifndef PWD_H
-#define PWD_H
+char *read_command_line(char **history, int *index, int *history_len, const char *workin_dir) {
+    redraw("", workin_dir);
+    static char buf[1024];
+    int len = 0;
+    int cursor_pos = 0;
+    while (1) {
+        char c;
+        read(STDIN_FILENO, &c, 1);
 
-const char *print_workin(void);
-
-#endif
-#ifndef RM_H
-#define RM_H
-
-#define RM_I 1
-#define RM_R 2
-#define RM_F 4
-#define RM_INTER 8
-#define RM_V 16
-
-int remove_item(const char *name, int confirm, int recursive, int force, int verbose);
-
-int remove_dir(const char *dirname);
-
-int parse_rm_flags(int argc, char **argv, int *start);
-
-#endif
-#ifndef UTILS_H
-#define UTILS_H
-
-enum Commands {CMD_exit, CMD_pwd, CMD_ls, CMD_cd, CMD_clear, CMD_cat, CMD_rm, CMD_mkdir};
-
-typedef struct {
-    const char *name;
-    int id;
-} Cmd;
-
-extern Cmd cmds[];
-
-typedef struct {
-    int files;
-    int dirs;
-} Count;
-
-int get_line(char *line, int lim);
-char *skip_spaces(char *s);
-int dir_exists(const char *path);
-int parse_line(char *line, char **argv, int max);
-int get_command_id(char *line);
-const char *return_last_dir(const char *workin);
-Count dir_items(const char *dirname);
-void enable_raw(void);
-void disable_raw(void);
-void redraw(const char *buf, const char *workin_dir);
-void load_string(char **history, int index, char *buf, int *len, const char *workin_dir);
-char *read_command_line(char **history, int *index, int *history_len, const char *workin_dir);
-
-#endif
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
-#include "ascii.h"
-
-void print_ascii_name(void) {
-    printf("\n\n");
-    print_centered(" █████╗  █████╗ ██████╗ ███╗   ██╗", 34);
-    print_centered("██╔══██╗██╔══██╗██╔══██╗████╗  ██║", 34);
-    print_centered("███████║███████║██████╔╝██╔██╗ ██║", 34);
-    print_centered("██╔══██║██╔══██║██╔══██╗██║╚██╗██║", 34);
-    print_centered("██║  ██║██║  ██║██║  ██║██║ ╚████║", 34);
-    print_centered("╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝", 34);
-    printf("\n\n\n");
-}
-
-int get_term_width(void) {
-    struct winsize w;
-    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == -1) {
-        return 80;
+        if (c == '\n') {
+            buf[len] = '\0';
+            history[(*history_len)++] = strdup(buf);
+            *index = *history_len;
+            len = 0;
+            cursor_pos = 0;
+            printf("\n");
+            //redraw("", workin_dir);
+            return buf;
+        } else if (c == 127 || c == 8) {
+            if (cursor_pos > 0 && len > 0) {
+                cursor_pos--;
+                len--;
+                buf[len] = '\0';
+                redraw(buf, workin_dir);
+            }
+        } else if (c == '\x1b') {
+            char seq[2];
+            read(STDIN_FILENO, &seq[0], 1);
+            read(STDIN_FILENO, &seq[1], 1);
+            if (seq[1] == 'A') {
+                if (*history_len > 0 && *index > 0) {
+                    (*index)--;
+                    load_string(history, *index, buf, &len, workin_dir);
+                    cursor_pos = 0;
+                } else if (*index == (*history_len) - 1) {
+                    *index = *history_len;
+                    len = 0;
+                    buf[0] = '\0';
+                    cursor_pos = 0;
+                    redraw("", workin_dir);
+                }
+            }
+            if (seq[1] == 'B') {
+                if (*index < (*history_len) - 1) {
+                    (*index)++;
+                    load_string(history, *index, buf, &len, workin_dir);
+                    cursor_pos = 0;
+                } else if (*index == (*history_len) - 1) {
+                    *index = *history_len;
+                    len = 0;
+                    buf[0] = '\0';
+                    redraw("", workin_dir);
+                    cursor_pos = 0;
+                }
+            }
+            if (seq[1] == 'D') {
+                if (cursor_pos > 0) {
+                    cursor_pos--;
+                    printf("\033[1D");
+                }
+            }
+            if (seq[1] == 'C') {
+                if (cursor_pos < len) {
+                    cursor_pos++;
+                    printf("\033[1C");
+                }
+            }
+        } else {
+            memmove(buf + cursor_pos + 1, buf + cursor_pos, len - cursor_pos);
+            buf[cursor_pos] = c;
+            len++;
+            cursor_pos++;
+            printf("%c", c);
+            printf("\033[%dC", cursor_pos);
+            
+        }
     }
-    return w.ws_col;
 }
 
-void print_centered(const char *line, int ascii_width) {
-    int term_width = get_term_width();
-
-    int padding = (term_width - ascii_width) / 2;
-    if (padding < 0) padding = 0;
-
-    for (int i = 0; i < padding; i++) putchar(' ');
-    printf("%s\n", line);
-}
-#ifndef ASCII_H
-#define ASCII_H
-
-void print_ascii_name(void);
-int get_term_width(void);
-void print_centered(const char *line, int ascii_width);
-
-#endif
-#include "helps.h"
-
-#include <stdio.h>
-
-void cat_help(void) {
-    printf(
-            "usage: cat <file>\n"
-            "\n"
-            "'cat' displays the contents of the specified file\n"
-    );
+void enable_raw(void) {
+    tcgetattr(STDIN_FILENO, &orig);
+    struct termios raw = orig;
+    raw.c_lflag &= ~(ECHO | ICANON);
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
-void cd_help(void) {
-    printf(
-            "usage: cd <path>\n"
-            "\n"
-            "'cd' changes the current working directory to the specified one\n"
-    );
+void disable_raw(void) {
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig);
 }
-#ifndef HELPS_H
-#define HELPS_H
 
-void cat_help(void);
-void cd_help(void);
+void redraw(const char *buf, const char *workin_dir) {
+    printf("\r\033[K%s> %s", workin_dir, buf);
+    fflush(stdout);
+}
 
-#endif
+void load_string(char **history, int index, char *buf, int *len, const char *workin_dir) {
+    strcpy(buf, history[index]);
+    *len = strlen(buf);
+    redraw(buf, workin_dir);
+}
+
+int get_line(char *line, int lim) {
+    int c, i = 0;
+    while (--lim > 0 && (c = getchar()) != EOF && c != '\n') {
+        line[i++] = c;
+    }
+    if (c == '\n') line[i++] = '\n';
+    line[i] = '\0';
+    return i;
+}
+
+char *skip_spaces(char *s) {
+    while (*s == ' ' || *s == '\t') s++;
+    return s;
+}
+
+int dir_exists(const char *path) {
+    struct stat st;
+    return (stat(path, &st) == 0) && S_ISDIR(st.st_mode);
+}
+
+int parse_line(char *line, char **argv, int max) {
+    int argc = 0;
+    line[strcspn(line, "\r\n")] = 0;
+
+    while (*line && argc < max - 1) {
+        while (*line == ' ' || *line == '\t') line++;
+        if (!*line) break;
+
+        argv[argc++] = line;
+        while (*line && *line != ' ' && *line != '\t') line++;
+        if (*line) *line++ = 0;
+    }
+
+    argv[argc] = NULL;
+    return argc;
+}
+
+int get_command_id(char *line) {
+    char *argv[16];
+    int arg_count = parse_line(line, argv, 16);
+    if (arg_count < 1) {
+        printf("\n");
+        return -10;
+    }
+    char *command = argv[0];
+    for (int i = 0; i < 8; i++) {
+        if (strcmp(command, cmds[i].name) == 0) return cmds[i].id;
+    }
+    return -1;
+}
+
+const char *return_last_dir(const char *workin) {
+    const char *last = strrchr(workin, '/');
+    return (last && *(last + 1)) ? last + 1 : workin;
+}
+
+Count dir_items(const char *dirname) {
+    Count c = {0, 0};
+    DIR *w_dir = opendir(dirname);
+    if (!w_dir) {
+        return c;
+    }
+
+    struct dirent *ent;
+    while ((ent = readdir(w_dir)) != NULL) {
+        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
+        if (ent->d_type == DT_DIR) c.dirs++;
+        else c.files++;
+    }
+    closedir(w_dir);
+    return c;
+}
