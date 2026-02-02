@@ -19,6 +19,61 @@ Cmd cmds[] = {
 
 struct termios orig;
 
+char *read_command_line(char **history, int *index, int *history_len, const char *workin_dir) {
+    redraw("", workin_dir);
+    static char buf[1024];
+    int len = 0;
+    while (1) {
+        char c;
+        read(STDIN_FILENO, &c, 1);
+
+        if (c == '\n') {
+            buf[len] = '\0';
+            history[(*history_len)++] = strdup(buf);
+            *index = *history_len;
+            len = 0;
+            printf("\n");
+            redraw("", workin_dir);
+            return buf;
+        } else if (c == 127 || c == 8) {
+            if (len > 0) {
+                len--;
+                buf[len] = '\0';
+                redraw(buf, workin_dir);
+            }
+        } else if (c == '\x1b') {
+            char seq[2];
+            read(STDIN_FILENO, &seq[0], 1);
+            read(STDIN_FILENO, &seq[1], 1);
+            if (seq[1] == 'A') {
+                if (*history_len > 0 && *index > 0) {
+                    (*index)--;
+                    load_string(history, *index, buf, &len, workin_dir);
+                } else if (*index == (*history_len) - 1) {
+                    *index = *history_len;
+                    len = 0;
+                    buf[0] = '\0';
+                    redraw("", workin_dir);
+                }
+            }
+            if (seq[1] == 'B') {
+                if (*index < (*history_len) - 1) {
+                    (*index)++;
+                    load_string(history, *index, buf, &len, workin_dir);
+                } else if (*index == (*history_len) - 1) {
+                    *index = *history_len;
+                    len = 0;
+                    buf[0] = '\0';
+                    redraw("", workin_dir);
+                }
+            }
+        } else {
+            buf[len++] = c;
+            write(STDOUT_FILENO, &c, 1);
+        }
+    }
+}
+
 void enable_raw(void) {
     tcgetattr(STDIN_FILENO, &orig);
     struct termios raw = orig;
@@ -30,12 +85,12 @@ void disable_raw(void) {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig);
 }
 
-void redraw(const char *buf, char *workin_dir) {
+void redraw(const char *buf, const char *workin_dir) {
     printf("\r\033[K%s> %s", workin_dir, buf);
     fflush(stdout);
 }
 
-void load_string(char **history, int index, char *buf, int *len, char *workin_dir) {
+void load_string(char **history, int index, char *buf, int *len, const char *workin_dir) {
     strcpy(buf, history[index]);
     *len = strlen(buf);
     redraw(buf, workin_dir);

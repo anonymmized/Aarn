@@ -35,10 +35,14 @@ int main() {
         fprintf(stderr, "Error with opening dir\n");
         return 1;
     }
+    char *history[100] = {NULL};
+    int hist_index = 0;
+    int hist_len = 0;
     char *c_d = (char *)current_dir;
-    char line[MAXLINE];
     int len;
-    while ((len = get_line(line, MAXLINE)) > 0) {
+    enable_raw();
+    while (1) {
+        char *line = read_command_line(history, &hist_index, &hist_len, workin);
         char *argv[16];
         int argc = parse_line(line, argv, 16);
         int output_code = get_command_id(argv[0]);
