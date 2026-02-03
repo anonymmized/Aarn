@@ -16,6 +16,7 @@
 #include "../headers/mkdir.h"
 #include "../helps/helps.h"
 #include "../helps/ascii.h"
+#include "../headers/touch.h"
 
 #define MAXLINE 1024
 
@@ -48,6 +49,9 @@ int main() {
         int argc = parse_line(line, argv, 16);
         int output_code = get_command_id(argv[0]);
         switch (output_code) {
+            case CMD_touch:
+                touch_file(argv[1]);
+                break;
             case CMD_exit:
                 fprintf(stdout, "exit in progress...\n");
                 disable_raw();

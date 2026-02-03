@@ -14,7 +14,8 @@ Cmd cmds[] = {
     {"clear", CMD_clear},
     {"cat", CMD_cat},
     {"rm", CMD_rm},
-    {"mkdir", CMD_mkdir}
+    {"mkdir", CMD_mkdir},
+    {"touch", CMD_touch}
 };
 
 struct termios orig;
@@ -161,7 +162,7 @@ int get_command_id(char *line) {
         return -10;
     }
     char *command = argv[0];
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 9; i++) {
         if (strcmp(command, cmds[i].name) == 0) return cmds[i].id;
     }
     return -1;
