@@ -38,3 +38,22 @@ int touch_file(const char *path, int atime, int mtime) {
 
     return 0;
 }
+
+int parse_touch_flags(int argc, char **argv, int *start) {
+    int flags = 0;
+    int i = 1;
+    while (i < argc && argv[i][0] == '-' && argv[i][0] != '\0') {
+        for (int j = 1; argv[i][j] != '\0'; j++) {
+            char c = argv[i][j];
+            if (c == 'a') flags |= TOUCH_ATIME;
+            else if (c == 'm') flags |= TOUCH_MTIME;
+            else {
+                fprintf(stderr, "touch: unknown option -%c\n", c);
+                return -1;
+            }
+        }
+        i++;
+    }
+    *start = i;
+    return flags;
+}

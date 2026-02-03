@@ -49,9 +49,17 @@ int main() {
         int argc = parse_line(line, argv, 16);
         int output_code = get_command_id(argv[0]);
         switch (output_code) {
-            case CMD_touch:
-                touch_file(argv[1]);
+            case CMD_touch: {
+                int start = 1;
+                int flags = parse_touch_flags(argc, argv, &start);
+                if (flags == -1) break;
+                int atime = (flags & TOUCH_ATIME) != 0;
+                int mtime = (flags & TOUCH_MTIME) != 0;
+                for (int i = start; i < argc; i++) {
+                    touch_file(argv[i], atime, mtime);
+                }
                 break;
+            }
             case CMD_exit:
                 fprintf(stdout, "exit in progress...\n");
                 disable_raw();
