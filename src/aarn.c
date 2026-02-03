@@ -27,6 +27,8 @@
 
 
 int main() {
+    printf("\033[?25l");
+    fflush(stdout);
     print_ascii_name();
     const char *workin = return_last_dir(print_workin());
     const char *current_dir;
@@ -41,7 +43,6 @@ int main() {
     int len;
     enable_raw();
     while (1) {
-        //printf(BOLD "%s > " ESC, workin);
         char *line = read_command_line(history, &hist_index, &hist_len, workin);
         char *argv[16];
         int argc = parse_line(line, argv, 16);
@@ -49,6 +50,9 @@ int main() {
         switch (output_code) {
             case CMD_exit:
                 fprintf(stdout, "exit in progress...\n");
+                disable_raw();
+                printf("\033[?25h");
+                fflush(stdout);
                 return 0;
             case CMD_pwd: { 
                 const char *pwd_v;
@@ -185,5 +189,8 @@ int main() {
                 break;
         }
     }
+    printf("\033[?25h");
+    fflush(stdout);
+    disable_raw();
     return 0;
 }
