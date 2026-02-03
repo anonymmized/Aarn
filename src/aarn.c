@@ -51,12 +51,18 @@ int main() {
         switch (output_code) {
             case CMD_touch: {
                 int start = 1;
+                char cstamp[20] = {0};
                 int flags = parse_touch_flags(argc, argv, &start);
                 if (flags == -1) break;
                 int atime = (flags & TOUCH_ATIME) != 0;
                 int mtime = (flags & TOUCH_MTIME) != 0;
+                int stamp = (flags & TOUCH_STAMP) != 0;
+                if (stamp) {
+                    strcpy(cstamp, argv[start]);
+                    start++;
+                }
                 for (int i = start; i < argc; i++) {
-                    touch_file(argv[i], atime, mtime);
+                    touch_file(argv[i], cstamp, atime, mtime, stamp);
                 }
                 break;
             }
