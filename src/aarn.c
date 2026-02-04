@@ -45,6 +45,9 @@ int main() {
     enable_raw();
     while (1) {
         char *line = read_command_line(history, &hist_index, &hist_len, workin);
+        if (line == NULL) {
+            return 1;
+        }
         char *argv[16];
         int argc = parse_line(line, argv, 16);
         int output_code = get_command_id(argv[0]);

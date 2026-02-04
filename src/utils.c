@@ -30,7 +30,16 @@ char *read_command_line(char **history, int *index, int *history_len, const char
     while (1) {
         char c;
         read(STDIN_FILENO, &c, 1);
-
+        if (c == '\x08') {
+            buf[0] = '\0';
+            cursor = 0;
+            redraw(buf, workin_dir, cursor);
+        }
+        if (c == '\x7f') {
+            buf[0] = '\0';
+            cursor = 0;
+            redraw(buf, workin_dir, cursor);
+        }
         if (c == '\n') {
             buf[len] = '\0';
             if (len > 0) {
