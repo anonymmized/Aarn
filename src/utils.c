@@ -20,6 +20,22 @@ Cmd cmds[] = {
 
 struct termios orig;
 
+void delete_word(char *buf, int *cursor, int *len) {
+    if (*cursor == 0) return;
+    int i = *cursor;
+
+    while (i > 0 && buf[i-1] == ' ') i--;
+    while (i > 0 && buf[i-1] != ' ') i--;
+
+    int remove = *cursor - i;
+
+    memmove(buf + i, buf + *cursor, *len - *cursor);
+
+    *len -= remove;
+    *cursor = i;
+    buf[*len] = '\0';
+}
+
 char *read_command_line(char **history, int *index, int *history_len, const char *workin_dir) {
     int cursor = 0;
     static char buf[1024];
@@ -32,11 +48,20 @@ char *read_command_line(char **history, int *index, int *history_len, const char
         if (read(STDIN_FILENO, &c, 1) <= 0) {
             continue;
         }
-        if (c == '\x08') {
-            buf[0] = '\0';
-            cursor = 0;
+        
+        if (c == 23) {
+            delete_word(buf, &cursor, &len);
             redraw(buf, workin_dir, cursor);
+            continue;
         }
+        if (c == 21) {
+            cursor = 0;
+            buf[0] = '\0';
+            len = 0;
+            redraw(buf, workin_dir, cursor);
+            continue;
+        }
+
         if (c == '\n') {
             buf[len] = '\0';
             if (len > 0) {

@@ -25,6 +25,7 @@ Count dir_items(const char *dirname);
 void enable_raw(void);
 void disable_raw(void);
 void redraw(const char *buf, const char *workin_dir, int cursor);
+void delete_word(char *buf, int *cursor, int *len);
 char *read_command_line(char **history, int *index, int *history_len, const char *workin_dir);
 
 #endif
