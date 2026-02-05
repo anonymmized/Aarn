@@ -29,13 +29,10 @@ char *read_command_line(char **history, int *index, int *history_len, const char
     redraw(buf, workin_dir, cursor);
     while (1) {
         char c;
-        read(STDIN_FILENO, &c, 1);
-        if (c == '\x08') {
-            buf[0] = '\0';
-            cursor = 0;
-            redraw(buf, workin_dir, cursor);
+        if (read(STDIN_FILENO, &c, 1) <= 0) {
+            continue;
         }
-        if (c == '\x7f') {
+        if (c == '\x08') {
             buf[0] = '\0';
             cursor = 0;
             redraw(buf, workin_dir, cursor);
@@ -57,12 +54,20 @@ char *read_command_line(char **history, int *index, int *history_len, const char
             redraw(buf, workin_dir, cursor);
         } else if (c == '\x1b') {
             char seq[2];
-            read(STDIN_FILENO, &seq[0], 1);
-            read(STDIN_FILENO, &seq[1], 1);
+            if (read(STDIN_FILENO, &seq[0], 1) <= 0) {
+                continue;
+            }
+            if (read(STDIN_FILENO, &seq[1], 1) <= 0) {
+                continue;
+            }
             if (seq[1] == 'A') {
                 if (*index > 0) {
                     (*index)--;
-                    strcpy(buf, history[*index]);
+                    if (history[*index]) {
+                        strcpy(buf, history[*index]);
+                    } else {
+                        buf[0] = '\0';
+                    }
                     len = cursor = strlen(buf);
                     redraw(buf, workin_dir, cursor);
                 }
@@ -70,7 +75,11 @@ char *read_command_line(char **history, int *index, int *history_len, const char
             if (seq[1] == 'B') {
                 if (*index < (*history_len) - 1) {
                     (*index)++;
-                    strcpy(buf, history[*index]);
+                    if (history[*index]) {
+                        strcpy(buf, history[*index]);
+                    } else {
+                        buf[0] = '\0';
+                    }
                     len = cursor = strlen(buf);
                 } else {
                     *index = *history_len;
