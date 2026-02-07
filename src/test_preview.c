@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 
 #define ESC    "\033[0m"
 #define ORANGE "\033[33m"
@@ -13,21 +14,16 @@ void redraw(char **f_list, int len, int target, int chose);
 
 struct termios orig;
 
-int cat_file(char *filename) {
-    FILE *fp = fopen(filename, "r");
-    if (!fp) {
-        perror("fp");
-        return 1;
-    }
-    char buf[1024];
-    while (fgets(buf, sizeof(buf), fp)) fputs(buf, stdout);
-    if (ferror(fp)) {
-        perror("fgets");
-        fclose(fp);
-        return 1;
-    }
-    fclose(fp);
-    return 0;
+void get_term_size(int *rows, int *cols) {
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    *rows = w.ws_row;
+    *cols = w.ws_col;
+}
+
+void print_clipped(const char *s, int max_width) {
+    for (int i = 0; i < max_width && s[i] && s[i] != '\n'; i++) 
+        putchar(s[i]);
 }
 
 int check_dir(char *filename) {
@@ -131,11 +127,16 @@ void redraw(char **f_list, int len, int target, int chose) {
             perror("fopen");
             return;
         }
+        int rows = 0;
+        int cols = 0;
+        get_term_size(&rows, &cols);
+        int preview_col = 0.35 * cols + 1;
+        int preview_width = cols - preview_col;
         char line[1024];
         int row = 1;
-        while (fgets(line, sizeof(line), fp) && row < 40) {
-            printf("\033[%d;40H", row);
-            printf("%s", line);
+        while (fgets(line, sizeof(line), fp) && row < rows) {
+            printf("\033[%d;%dH", row, preview_col);
+            print_clipped(line, preview_width);
             row++;
         }
         fclose(fp);
