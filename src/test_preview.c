@@ -15,9 +15,7 @@ struct termios orig;
 
 int check_dir(char *filename) {
     struct stat buf;
-    char fullpath[100];
-    snprintf(fullpath, sizeof(fullpath), "../%s", filename);
-    if (stat(fullpath, &buf) != 0) {
+    if (stat(filename, &buf) != 0) {
         perror("stat");
         return -1;
     }
@@ -89,18 +87,19 @@ void redraw(char **f_list, int len, int target, int chose) {
         return;
     }
     for (int i = 0; i < len; i++) {
+        char *new_s = strrchr(f_list[i], '/') + 1;
         if (i == target) {
             if (chose == 1) {
                 if (check_dir(f_list[i]) == 1) {
-                    printf(ORANGE "%s - file\n" ESC, f_list[i]);
+                    printf(ORANGE "%s - file\n" ESC, new_s);
                 } else if (check_dir(f_list[i]) == 2) {
-                    printf(ORANGE "%s - directory\n" ESC, f_list[i]);
+                    printf(ORANGE "%s - directory\n" ESC, new_s);
                 }
             } else {
-                printf(ORANGE "%s\n" ESC, f_list[i]);
+                printf(ORANGE "%s\n" ESC, new_s);
             }
         } else {
-            printf("%s\n", f_list[i]);
+            printf("%s\n", new_s);
         }
     }
     fflush(stdout);
@@ -116,8 +115,10 @@ int list(char *dir, char **f_list) {
     struct dirent *ent;
     while ((ent = readdir(wdir)) != NULL) {
         if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
-        f_list[items_count] = malloc(strlen(ent->d_name) + 1);
-        strcpy(f_list[items_count++], ent->d_name);
+        char fullpath[1024];
+        snprintf(fullpath, sizeof(fullpath), "%s/%s", dir, ent->d_name);
+        f_list[items_count] = malloc(strlen(fullpath) + 1);
+        strcpy(f_list[items_count++], fullpath);
     }
     closedir(wdir);
     return items_count;
