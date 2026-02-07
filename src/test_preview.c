@@ -10,7 +10,7 @@
 #define ESC    "\033[0m"
 #define ORANGE "\033[33m"
 
-void redraw(char **f_list, int len, int target, int chose);
+void redraw(char **f_list, int len, int target);
 void print_clipped(const char *s, int max_width);
 
 struct termios orig;
@@ -71,18 +71,16 @@ void disable_raw(void) {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig);
 }
 
-void input_monitor(char **f_list, int len, int target) {
+void input_monitor(char **f_list, int len) {
     int index = 0;
-    int chose = 0;
-    redraw(f_list, len, index, chose);
+    redraw(f_list, len, index);
     while (1) {
         char c;
         if (read(STDIN_FILENO, &c, 1) <= 0) {
             continue;
         }
         if (c == '\n') {
-            chose = 1;
-            redraw(f_list, len, index, chose);
+            redraw(f_list, len, index);
             continue;
         }
         if (c == 'q') {
@@ -95,14 +93,14 @@ void input_monitor(char **f_list, int len, int target) {
             if (seq[1] == 'A') {
                 if (index != 0) {
                     index -= 1;
-                    redraw(f_list, len, index, chose);
+                    redraw(f_list, len, index);
                 }
             }
             
             if (seq[1] == 'B') {
                 if (index < len) {
                     index += 1;
-                    redraw(f_list, len, index, chose);
+                    redraw(f_list, len, index);
                 }
             }
             
@@ -115,36 +113,31 @@ void input_monitor(char **f_list, int len, int target) {
     }
 }
 
-void redraw(char **f_list, int len, int target, int chose) {
+void redraw(char **f_list, int len, int index) {
     printf("\033[H\033[J");
-    if (target > len) {
+    if (index > len) {
         return;
     }
     char target_name[1024];
     for (int i = 0; i < len; i++) {
         printf("\033[%d;1H", i + 1);
         char *new_s = strrchr(f_list[i], '/') + 1;
-        if (i == target) {
-            if (chose == 1) {
-                if (check_dir(f_list[i]) == 1) {
-                    printf(ORANGE "\t%s\n\n" ESC, new_s);
-                    strcpy(target_name, f_list[i]);
-                } else if (check_dir(f_list[i]) == 2) {
-                    printf(ORANGE "\t%s\n\n" ESC, new_s);
-                }
-            } else {
+        if (i == index) {
+            if (check_dir(f_list[i]) == 1) {
+                printf(ORANGE "\t%s\n\n" ESC, new_s);
+                strcpy(target_name, f_list[i]);
+            } else if (check_dir(f_list[i]) == 2) {
                 printf(ORANGE "\t%s\n\n" ESC, new_s);
             }
         } else {
             printf("\t%s\n\n", new_s);
         }
     }
-    if (chose == 1) { 
-        int rows = 0;
-        int cols = 0;
-        get_term_size(&rows, &cols);
-        draw_file_preview(target_name, rows, cols);
-    }
+    int rows = 0;
+    int cols = 0;
+    get_term_size(&rows, &cols);
+    draw_file_preview(target_name, rows, cols);
+    
     fflush(stdout);
 }
 
@@ -174,7 +167,7 @@ int main() {
     int items_count = list(".", f_list);
     printf("Current dir: %d\n", items_count);
     enable_raw();
-    input_monitor(f_list, items_count, 11);
+    input_monitor(f_list, items_count);
     
     disable_raw();
     printf("\033[?25h");
