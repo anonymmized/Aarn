@@ -11,6 +11,7 @@
 #define ORANGE "\033[33m"
 
 void redraw(char **f_list, int len, int target, int chose);
+void print_clipped(const char *s, int max_width);
 
 struct termios orig;
 
@@ -19,6 +20,24 @@ void get_term_size(int *rows, int *cols) {
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     *rows = w.ws_row;
     *cols = w.ws_col;
+}
+
+void draw_file_preview(char *filepath, int rows, int cols) {
+    FILE *fp = fopen(filepath, "r");
+    if (!fp) {
+        perror("fopen");
+        return;
+    }
+    int preview_col = 0.35 * cols + 1;
+    int preview_rows = cols - preview_col;
+    char line[1024];
+    int row = 1;
+    while (fgets(line, sizeof(line), fp) && row <= rows) {
+        printf("\033[%d;%dH", row, preview_col);
+        print_clipped(line, preview_rows);
+        row++;
+    }
+    fclose(fp);
 }
 
 void print_clipped(const char *s, int max_width) {
@@ -64,7 +83,6 @@ void input_monitor(char **f_list, int len, int target) {
         if (c == '\n') {
             chose = 1;
             redraw(f_list, len, index, chose);
-            chose = 0;
             continue;
         }
         if (c == 'q') {
@@ -122,24 +140,10 @@ void redraw(char **f_list, int len, int target, int chose) {
         }
     }
     if (chose == 1) { 
-        FILE *fp = fopen(target_name, "r");
-        if (!fp) {
-            perror("fopen");
-            return;
-        }
         int rows = 0;
         int cols = 0;
         get_term_size(&rows, &cols);
-        int preview_col = 0.35 * cols + 1;
-        int preview_width = cols - preview_col;
-        char line[1024];
-        int row = 1;
-        while (fgets(line, sizeof(line), fp) && row < rows) {
-            printf("\033[%d;%dH", row, preview_col);
-            print_clipped(line, preview_width);
-            row++;
-        }
-        fclose(fp);
+        draw_file_preview(target_name, rows, cols);
     }
     fflush(stdout);
 }
