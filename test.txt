@@ -16,7 +16,7 @@ void enable_raw(void) {
     tcgetattr(STDIN_FILENO, &orig);
     struct termios raw = orig;
     raw.c_lflag &= ~(ECHO | ICANON);
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig);
 }
 
 void disable_raw(void) {
@@ -32,39 +32,36 @@ void input_monitor(char **f_list, int len, int target) {
             continue;
         }
         if (c == '\x1b') {
-            char seq[2];
-            if (read(STDIN_FILENO, &seq[0], 1) <= 0) continue;
-            if (read(STDIN_FILENO, &seq[1], 1) <= 0) continue;
-            if (seq[1] == 'A') {
-                if (index != 0) {
-                    index -= 1;
-                    redraw(f_list, len, index);
-                }
-            }
-            
-            if (seq[1] == 'B') {
-                if (index < len) {
-                    index += 1;
-                    redraw(f_list, len, index);
-                }
-            }
-            
-            if (seq[1] == 'C')
-                printf("Стрелка вправо\n");
-            if (seq[1] == 'D')
-                printf("Стрелка влево\n");
-             
+            char seq[5];
+            int i = 0;
+            do {
+                seq[i++] = c;
+                if (read(STDIN_FILENO, &c, 1) <= 0) break;
+            } while (c != '$');
+            switch(seq[1]) {
+                case 'A':
+                    printf("Стрелка вверх\n");
+                    break;
+                case 'B':
+                    printf("Стрелка вниз\n");
+                    break;
+                case 'C':
+                    printf("Стрелка вправо\n");
+                    break;
+                case 'D':
+                    printf("Стрелка влево\n");
+                    break;
+            } 
         }
     }
 }
 
 void redraw(char **f_list, int len, int target) {
-    printf("\033[H\033[J");
     if (target > len) {
         return;
     }
     for (int i = 0; i < len; i++) {
-        if (i == target) {
+        if (i == target - 1) {
             printf(ORANGE "%s\n" ESC, f_list[i]);
         } else {
             printf("%s\n", f_list[i]);
