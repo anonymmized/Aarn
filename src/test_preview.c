@@ -123,20 +123,24 @@ void input_monitor(char **f_list, int len) {
                 if (index != 0) {
                     index -= 1;
                     redraw(f_list, len, index);
+                } else if (index == 0) {
+                    index = len - 1;
+                    redraw(f_list, len, index);
                 }
             }
             
             if (seq[1] == 'B') {
-                if (index < len) {
-                    index += 1;
-                    redraw(f_list, len, index);
+                index++;
+                if (index >= len) {
+                    index = 0;
                 }
+                redraw(f_list, len, index);
             }
             
             if (seq[1] == 'C')
                 printf("Стрелка вправо\n");
             if (seq[1] == 'D')
-                printf("Стрелка влево\n");
+               printf("Стрелка влево\n");
             
         }
     }
