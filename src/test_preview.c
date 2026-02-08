@@ -20,6 +20,16 @@ void print_name_clipped(const char *name, int width);
 char cwd[PATH_MAX];
 struct termios orig;
 
+int is_binary(FILE *fp) {
+    unsigned char buf[512];
+    size_t n = fread(buf, 1, sizeof(buf), fp);
+    for (size_t i = 0; i < n; i++) {
+        if (buf[i] == 0) return 1;
+    }
+    rewind(fp);
+    return 0;
+}
+
 void clear_preview_area(int rows, int cols) {
     int list_width = cols / 3;
     int preview_col = list_width + GAP + 1;
@@ -52,6 +62,11 @@ void draw_file_preview(char *filepath, int rows, int cols) {
     int list_width = cols / 3;
     int preview_col = list_width + GAP + 1;
     int preview_width = cols - preview_col;
+    if (is_binary(fp)) {
+        printf("\033[1;%dH<BINARY>", preview_col);
+        fclose(fp);
+        return;
+    }
     char line[4096];
     int row = 1;
     printf("\033[?7l");
@@ -168,6 +183,35 @@ void input_monitor(char **f_list, int len) {
                 if (index >= offset + visible)
                     offset = index - visible + 1;
                 redraw(f_list, len, index, offset);
+            }
+            if (seq[1] == 'C') {
+                char path[PATH_MAX];
+                snprintf(path, sizeof(path), "%s/%s", cwd, strrchr(f_list[index], '/') + 1);
+                if (check_dir(path) == 2) {
+                    chdir(path);
+                    getcwd(cwd, sizeof(cwd));
+                    for (int i = 0; i < len; i++) {
+                        free(f_list[i]);
+                    }
+                    len = list(cwd, f_list);
+                    index = 0;
+                    redraw(f_list, len, index, offset);
+                } else {
+                    redraw(f_list, len, index, offset);
+                }
+            } 
+            if (seq[1] == 'D') {
+                if (strcmp(cwd, "/") != 0) {
+                    chdir("..");
+                    getcwd(cwd, sizeof(cwd));
+                    for (int i = 0; i < len; i++) {
+                        free(f_list[i]);
+                    }
+                    len = list(cwd, f_list);
+                    index = 0;
+                    redraw(f_list, len, index, offset);
+                }
+                continue;
             }
         }
     }
