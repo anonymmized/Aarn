@@ -31,21 +31,27 @@ void draw_file_preview(char *filepath, int rows, int cols) {
         perror("fopen");
         return;
     }
-    int preview_col = 0.35 * cols + 1;
-    int preview_width = cols - preview_col;
+    int preview_col = cols / 3; 
+    int preview_width = cols - preview_col - 1;
+
     char line[1024];
     int row = 1;
+    printf("\033[?7l");
     while (fgets(line, sizeof(line), fp) && row <= rows) {
         printf("\033[%d;%dH", row, preview_col);
         print_clipped(line, preview_width);
         row++;
     }
+    printf("\033[?7h");
     fclose(fp);
 }
 
 void print_clipped(const char *s, int max_width) {
-    for (int i = 0; i < max_width && s[i] && s[i] != '\n'; i++) 
+    int i = 0;
+    while (i < max_width && s[i] && s[i] != '\n') {
         putchar(s[i]);
+        i++;
+    }
 }
 
 int check_dir(char *filename) {
@@ -139,12 +145,15 @@ void input_monitor(char **f_list, int len) {
             }
 
             if (seq[1] == 'B') {
-                index++;
-                if (index >= len) index = 0;
+                if (index < len - 1) {
+                    index++;
+                } else {
+                    index = 0;
+                    offset = 0;
+                }
 
-                if (index >= offset + visible)
+                if (index >= offset + visible) 
                     offset = index - visible + 1;
-
                 redraw(f_list, len, index, offset);
             }
         }
@@ -170,7 +179,7 @@ void redraw(char **f_list, int len, int index, int offset) {
 
         if (real == index) {
             printf(ORANGE "\t%s\n" ESC, name);
-            if (check_dir(f_list[i]) == 1) {
+            if (check_dir(f_list[real]) == 1) {
                 strcpy(target_name, f_list[real]);
             }
         } else {
@@ -205,7 +214,10 @@ int list(char *dir, char **f_list) {
 
 
 int main() {
+    setvbuf(stdout, NULL, _IONBF, 0);
+    printf("\033[?1049h");
     printf("\033[?25l");
+    fflush(stdout);
     char *f_list[100];
     getcwd(cwd, sizeof(cwd));
     int items_count = list(cwd, f_list);
@@ -215,6 +227,8 @@ int main() {
     
     disable_raw();
     printf("\033[?25h");
+    printf("\033[?1049l");
+    fflush(stdout);
     for (int i = 0; i < items_count; i++) {
         free(f_list[i]);
     }
