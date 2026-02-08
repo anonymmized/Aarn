@@ -11,7 +11,7 @@
 #define ESC    "\033[0m"
 #define ORANGE "\033[33m"
 
-void redraw(char **f_list, int len, int target);
+void redraw(char **f_list, int len, int target, int offset);
 void print_clipped(const char *s, int max_width);
 int list(char *dir, char **f_list);
 
@@ -32,12 +32,12 @@ void draw_file_preview(char *filepath, int rows, int cols) {
         return;
     }
     int preview_col = 0.35 * cols + 1;
-    int preview_rows = cols - preview_col;
+    int preview_width = cols - preview_col;
     char line[1024];
     int row = 1;
     while (fgets(line, sizeof(line), fp) && row <= rows) {
         printf("\033[%d;%dH", row, preview_col);
-        print_clipped(line, preview_rows);
+        print_clipped(line, preview_width);
         row++;
     }
     fclose(fp);
@@ -75,7 +75,8 @@ void disable_raw(void) {
 
 void input_monitor(char **f_list, int len) {
     int index = 0;
-    redraw(f_list, len, index);
+    int offset = 0;
+    redraw(f_list, len, index, offset);
     while (1) {
         char c;
         if (read(STDIN_FILENO, &c, 1) <= 0) {
@@ -92,9 +93,9 @@ void input_monitor(char **f_list, int len) {
                 }
                 len = list(cwd, f_list);
                 index = 0;
-                redraw(f_list, len, index);
+                redraw(f_list, len, index, offset);
             } else {
-                redraw(f_list, len, index);
+                redraw(f_list, len, index, offset);
             }
             continue;
         }
@@ -108,7 +109,7 @@ void input_monitor(char **f_list, int len) {
                 }
                 len = list(cwd, f_list);
                 index = 0;
-                redraw(f_list, len, index);
+                redraw(f_list, len, index, offset);
             }
             continue;
         }
@@ -119,56 +120,62 @@ void input_monitor(char **f_list, int len) {
             char seq[2];
             if (read(STDIN_FILENO, &seq[0], 1) <= 0) continue;
             if (read(STDIN_FILENO, &seq[1], 1) <= 0) continue;
+            int rows, cols;
+            get_term_size(&rows, &cols);
+            int visible = rows;
+
             if (seq[1] == 'A') {
-                if (index != 0) {
-                    index -= 1;
-                    redraw(f_list, len, index);
-                } else if (index == 0) {
+                if (index > 0) index--;
+                else index = len - 1;
+
+                if (index < offset)
+                    offset = index;
+                if (index == 1) {
                     index = len - 1;
-                    redraw(f_list, len, index);
+                    offset = index;
                 }
+                redraw(f_list, len, index, offset);
             }
-            
+
             if (seq[1] == 'B') {
                 index++;
-                if (index >= len) {
-                    index = 0;
-                }
-                redraw(f_list, len, index);
+                if (index >= len) index = 0;
+
+                if (index >= offset + visible)
+                    offset = index - visible + 1;
+
+                redraw(f_list, len, index, offset);
             }
-            
-            if (seq[1] == 'C')
-                printf("Стрелка вправо\n");
-            if (seq[1] == 'D')
-               printf("Стрелка влево\n");
-            
         }
     }
 }
 
-void redraw(char **f_list, int len, int index) {
+void redraw(char **f_list, int len, int index, int offset) {
     printf("\033[H\033[J");
     if (index > len) {
         return;
     }
+    int rows, cols;
+    get_term_size(&rows, &cols);
+    int visible = rows;
     char target_name[1024] = "";
-    for (int i = 0; i < len; i++) {
+    for (int i = 0; i < visible; i++) {
+        int real = offset + i;
+        if (real >= len) break;
         printf("\033[%d;1H", i + 1);
-        char *new_s = strrchr(f_list[i], '/') + 1;
-        if (i == index) {
+        
+        char *name = strrchr(f_list[real], '/');
+        name = name ? name + 1 : f_list[real];
+
+        if (real == index) {
+            printf(ORANGE "\t%s\n" ESC, name);
             if (check_dir(f_list[i]) == 1) {
-                printf(ORANGE "\t%s\n\n" ESC, new_s);
-                strcpy(target_name, f_list[i]);
-            } else if (check_dir(f_list[i]) == 2) {
-                printf(ORANGE "\t%s\n\n" ESC, new_s);
+                strcpy(target_name, f_list[real]);
             }
         } else {
-            printf("\t%s\n\n", new_s);
+            printf("\t%s\n", name);
         }
     }
-    int rows = 0;
-    int cols = 0;
-    get_term_size(&rows, &cols);
     if (target_name[0] != '\0') {
         draw_file_preview(target_name, rows, cols);
     }
