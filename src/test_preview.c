@@ -4,6 +4,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <termios.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
@@ -12,7 +13,9 @@
 
 void redraw(char **f_list, int len, int target);
 void print_clipped(const char *s, int max_width);
+int list(char *dir, char **f_list);
 
+char cwd[PATH_MAX];
 struct termios orig;
 
 void get_term_size(int *rows, int *cols) {
@@ -48,7 +51,6 @@ void print_clipped(const char *s, int max_width) {
 int check_dir(char *filename) {
     struct stat buf;
     if (stat(filename, &buf) != 0) {
-        perror("stat");
         return -1;
     }
     if (S_ISREG(buf.st_mode)) {
@@ -80,7 +82,34 @@ void input_monitor(char **f_list, int len) {
             continue;
         }
         if (c == '\n') {
-            redraw(f_list, len, index);
+            char path[PATH_MAX];
+            snprintf(path, sizeof(path), "%s/%s", cwd, strrchr(f_list[index], '/') + 1);
+            if (check_dir(path) == 2) {
+                chdir(path);
+                getcwd(cwd, sizeof(cwd));
+                for (int i = 0; i < len; i++) {
+                    free(f_list[i]);
+                }
+                len = list(cwd, f_list);
+                index = 0;
+                redraw(f_list, len, index);
+            } else {
+                redraw(f_list, len, index);
+            }
+            continue;
+        }
+        if (c == 127 || c == 8) {
+            if (strcmp(cwd, "/") != 0) {
+                chdir("..");
+                getcwd(cwd, sizeof(cwd));
+
+                for (int i = 0; i < len; i++) {
+                    free(f_list[i]);
+                }
+                len = list(cwd, f_list);
+                index = 0;
+                redraw(f_list, len, index);
+            }
             continue;
         }
         if (c == 'q') {
@@ -118,7 +147,7 @@ void redraw(char **f_list, int len, int index) {
     if (index > len) {
         return;
     }
-    char target_name[1024];
+    char target_name[1024] = "";
     for (int i = 0; i < len; i++) {
         printf("\033[%d;1H", i + 1);
         char *new_s = strrchr(f_list[i], '/') + 1;
@@ -136,8 +165,10 @@ void redraw(char **f_list, int len, int index) {
     int rows = 0;
     int cols = 0;
     get_term_size(&rows, &cols);
-    draw_file_preview(target_name, rows, cols);
-    
+    if (target_name[0] != '\0') {
+        draw_file_preview(target_name, rows, cols);
+    }
+
     fflush(stdout);
 }
 
@@ -164,7 +195,8 @@ int list(char *dir, char **f_list) {
 int main() {
     printf("\033[?25l");
     char *f_list[100];
-    int items_count = list(".", f_list);
+    getcwd(cwd, sizeof(cwd));
+    int items_count = list(cwd, f_list);
     printf("Current dir: %d\n", items_count);
     enable_raw();
     input_monitor(f_list, items_count);
