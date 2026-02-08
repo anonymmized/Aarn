@@ -20,13 +20,28 @@ void print_name_clipped(const char *name, int width);
 char cwd[PATH_MAX];
 struct termios orig;
 
-int is_binary(FILE *fp) {
+int is_binary(const char *path) {
+    FILE *fp = fopen(path, "rb");
+    if (!fp) return 1;
     unsigned char buf[512];
     size_t n = fread(buf, 1, sizeof(buf), fp);
+    fclose(fp);
     for (size_t i = 0; i < n; i++) {
         if (buf[i] == 0) return 1;
     }
-    rewind(fp);
+    const char *ext = strrchr(path, '.');
+    if (!ext) return 0;
+
+    if (!strcmp(ext, ".pdf")) return 1;
+    if (!strcmp(ext, ".png")) return 1;
+    if (!strcmp(ext, ".jpg")) return 1;
+    if (!strcmp(ext, ".jpeg")) return 1;
+    if (!strcmp(ext, ".zip")) return 1;
+    if (!strcmp(ext, ".tar")) return 1;
+    if (!strcmp(ext, ".gz")) return 1;
+    if (!strcmp(ext, ".mp4")) return 1;
+    if (!strcmp(ext, ".mp3")) return 1;
+
     return 0;
 }
 
@@ -57,16 +72,18 @@ void print_name_clipped(const char *name, int width) {
     }
 }
 void draw_file_preview(char *filepath, int rows, int cols) {
+    if (is_binary(filepath)) {
+        int list_width = cols / 3;
+        int preview_col = list_width + GAP + 1;
+        printf("\033[%d;%dH", 1, preview_col);
+        printf("<BINARY FILE>");
+        return;
+    }
     FILE *fp = fopen(filepath, "r");
     if (!fp) return;
     int list_width = cols / 3;
     int preview_col = list_width + GAP + 1;
     int preview_width = cols - preview_col;
-    if (is_binary(fp)) {
-        printf("\033[1;%dH<BINARY>", preview_col);
-        fclose(fp);
-        return;
-    }
     char line[4096];
     int row = 1;
     printf("\033[?7l");
