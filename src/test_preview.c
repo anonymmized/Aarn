@@ -8,11 +8,14 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
-#define ESC    "\033[0m"
-#define ORANGE "\033[33m"
+#define CLR_RESET         "\033[0m"
+#define CLR_NORMAL        ""
+#define CLR_CURSOR        "\033[38;5;214m"
+#define CLR_MARKED        "\033[30;48;5;148m"
+#define CLR_CURSOR_MARKED "\033[30;48;5;214m"
 #define GAP 2
 
-void redraw(char **f_list, int len, int target, int offset);
+void redraw(char **f_list, int len, int target, int offset, int *marked);
 void print_clipped(const char *s, int max_width);
 int list(char *dir, char **f_list);
 void print_name_clipped(const char *name, int width);
@@ -129,7 +132,10 @@ void disable_raw(void) {
 
 void input_monitor(char **f_list, int len) {
     int index = 0;
-    int offset = 0;                                                                      redraw(f_list, len, index, offset);                                                  while (1) {
+    int offset = 0; 
+    int marked[1024] = {0};
+    redraw(f_list, len, index, offset, marked);
+    while (1) {
         char c;
         if (read(STDIN_FILENO, &c, 1) <= 0) {                                                    continue;
         }
@@ -144,9 +150,9 @@ void input_monitor(char **f_list, int len) {
                 }
                 len = list(cwd, f_list);
                 index = 0;
-                redraw(f_list, len, index, offset);
+                redraw(f_list, len, index, offset, marked);
             } else {
-                redraw(f_list, len, index, offset);
+                redraw(f_list, len, index, offset, marked);
             }
             continue;
         }
@@ -160,12 +166,17 @@ void input_monitor(char **f_list, int len) {
                 }
                 len = list(cwd, f_list);
                 index = 0;
-                redraw(f_list, len, index, offset);
+                redraw(f_list, len, index, offset, marked);
             }
             continue;
         }
         if (c == 'q') {
             return;
+        }
+        if (c == ' ') {
+            marked[index] = !marked[index];
+            redraw(f_list, len, index, offset, marked);
+            continue;
         }
         if (c == '\x1b') {
             char seq[2];
@@ -186,7 +197,7 @@ void input_monitor(char **f_list, int len) {
                 if (index < offset) {
                     offset = index;
                 }
-                redraw(f_list, len, index, offset);
+                redraw(f_list, len, index, offset, marked);
             }
 
             if (seq[1] == 'B') {
@@ -199,7 +210,7 @@ void input_monitor(char **f_list, int len) {
 
                 if (index >= offset + visible)
                     offset = index - visible + 1;
-                redraw(f_list, len, index, offset);
+                redraw(f_list, len, index, offset, marked);
             }
             if (seq[1] == 'C') {
                 char path[PATH_MAX];
@@ -212,9 +223,9 @@ void input_monitor(char **f_list, int len) {
                     }
                     len = list(cwd, f_list);
                     index = 0;
-                    redraw(f_list, len, index, offset);
+                    redraw(f_list, len, index, offset, marked);
                 } else {
-                    redraw(f_list, len, index, offset);
+                    redraw(f_list, len, index, offset, marked);
                 }
             } 
             if (seq[1] == 'D') {
@@ -226,7 +237,7 @@ void input_monitor(char **f_list, int len) {
                     }
                     len = list(cwd, f_list);
                     index = 0;
-                    redraw(f_list, len, index, offset);
+                    redraw(f_list, len, index, offset, marked);
                 }
                 continue;
             }
@@ -234,7 +245,7 @@ void input_monitor(char **f_list, int len) {
     }
 }
 
-void redraw(char **f_list, int len, int index, int offset) {
+void redraw(char **f_list, int len, int index, int offset, int *marked) {
     if (index >= len) return;
 
     int rows, cols;
@@ -257,15 +268,42 @@ void redraw(char **f_list, int len, int index, int offset) {
 
         char *name = strrchr(f_list[real], '/');
         name = name ? name + 1 : f_list[real];
-
-        if (real == index) {
-            printf(ORANGE " ");
+        if (real == index && marked[real]) {
+            printf(CLR_CURSOR_MARKED " ");
             print_name_clipped(name, list_width - 2);
-            printf(ESC);
+            printf(CLR_RESET);
+        } else if (real == index) {
+            printf(CLR_CURSOR " ");
+            print_name_clipped(name, list_width - 2);
+            printf(CLR_RESET);
+        } else if (marked[real]) {
+            printf(CLR_MARKED " ");
+            print_name_clipped(name, list_width - 2);
+            printf(CLR_RESET);
         } else {
             printf(" ");
             print_name_clipped(name, list_width - 2);
         }
+        /*
+        if (real == index) {
+            if (marked[real]) {
+                printf("\033[30;42m ");
+            } else {
+                printf(ORANGE " ");
+            }
+            print_name_clipped(name, list_width - 2);
+            printf(ESC);
+        } else {
+            if (marked[real]) {
+                printf("\033[30;42m ");
+                print_name_clipped(name, list_width - 2);
+                printf(ESC);
+            } else {
+                printf(" ");
+                print_name_clipped(name, list_width - 2);
+            }
+        }
+        */
 
         printf("\033[%d;%dH", i + 1, list_width);
     }
