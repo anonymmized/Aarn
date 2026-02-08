@@ -125,13 +125,14 @@ void input_monitor(char **f_list, int len) {
             int visible = rows;
 
             if (seq[1] == 'A') {
-                if (index > 0) index--;
-                else index = len - 1;
-
-                if (index < offset)
-                    offset = index;
-                if (index == 1) {
+                if (index > 0) {
+                    index--;
+                } else {
                     index = len - 1;
+                    offset = len - visible;
+                    if (offset < 0) offset = 0;
+                }
+                if (index < offset) {
                     offset = index;
                 }
                 redraw(f_list, len, index, offset);
