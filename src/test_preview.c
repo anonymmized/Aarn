@@ -10,13 +10,24 @@
 
 #define ESC    "\033[0m"
 #define ORANGE "\033[33m"
+#define GAP 2
 
 void redraw(char **f_list, int len, int target, int offset);
 void print_clipped(const char *s, int max_width);
 int list(char *dir, char **f_list);
+void print_name_clipped(const char *name, int width);
 
 char cwd[PATH_MAX];
 struct termios orig;
+
+void clear_preview_area(int rows, int cols) {
+    int list_width = cols / 3;
+    int preview_col = list_width + GAP + 1;
+    for (int r = 1; r <= rows; r++) {
+        printf("\033[%d;%dH\033[K", r, preview_col);
+    }
+}
+
 
 void get_term_size(int *rows, int *cols) {
     struct winsize w;
@@ -25,32 +36,39 @@ void get_term_size(int *rows, int *cols) {
     *cols = w.ws_col;
 }
 
+void print_name_clipped(const char *name, int width) {
+    int i = 0;
+    while (i < width - 1 && name[i] && name[i] != '\n') {
+        putchar(name[i]);
+        i++;
+    }
+    if (name[i] != '\0') {
+        printf("…");
+    }
+}
 void draw_file_preview(char *filepath, int rows, int cols) {
     FILE *fp = fopen(filepath, "r");
-    if (!fp) {
-        perror("fopen");
-        return;
-    }
-    int preview_col = cols / 3; 
-    int preview_width = cols - preview_col - 1;
-
-    char line[1024];
+    if (!fp) return;
+    int list_width = cols / 3;
+    int preview_col = list_width + GAP + 1;
+    int preview_width = cols - preview_col;
+    char line[4096];
     int row = 1;
     printf("\033[?7l");
     while (fgets(line, sizeof(line), fp) && row <= rows) {
         printf("\033[%d;%dH", row, preview_col);
         print_clipped(line, preview_width);
+        printf("\033[K");
         row++;
     }
     printf("\033[?7h");
     fclose(fp);
 }
 
+
 void print_clipped(const char *s, int max_width) {
-    int i = 0;
-    while (i < max_width && s[i] && s[i] != '\n') {
+    for (int i = 0; i < max_width && s[i] && s[i] != '\n'; i++) {
         putchar(s[i]);
-        i++;
     }
 }
 
@@ -63,12 +81,10 @@ int check_dir(char *filename) {
         return 1; // file
     } else if (S_ISDIR(buf.st_mode)) {
         return 2; // dir
-    } else {
-        return -1; // not dir & not file
+    } else {                                                                                 return -1; // not dir & not file
     }
 }
-
-void enable_raw(void) {
+                                                                                     void enable_raw(void) {
     tcgetattr(STDIN_FILENO, &orig);
     struct termios raw = orig;
     raw.c_lflag &= ~(ECHO | ICANON);
@@ -81,12 +97,9 @@ void disable_raw(void) {
 
 void input_monitor(char **f_list, int len) {
     int index = 0;
-    int offset = 0;
-    redraw(f_list, len, index, offset);
-    while (1) {
+    int offset = 0;                                                                      redraw(f_list, len, index, offset);                                                  while (1) {
         char c;
-        if (read(STDIN_FILENO, &c, 1) <= 0) {
-            continue;
+        if (read(STDIN_FILENO, &c, 1) <= 0) {                                                    continue;
         }
         if (c == '\n') {
             char path[PATH_MAX];
@@ -152,7 +165,7 @@ void input_monitor(char **f_list, int len) {
                     offset = 0;
                 }
 
-                if (index >= offset + visible) 
+                if (index >= offset + visible)
                     offset = index - visible + 1;
                 redraw(f_list, len, index, offset);
             }
@@ -161,33 +174,43 @@ void input_monitor(char **f_list, int len) {
 }
 
 void redraw(char **f_list, int len, int index, int offset) {
-    printf("\033[H\033[J");
-    if (index > len) {
-        return;
-    }
+    if (index >= len) return;
+
     int rows, cols;
     get_term_size(&rows, &cols);
-    int visible = rows;
-    char target_name[1024] = "";
-    for (int i = 0; i < visible; i++) {
+
+    int list_width = cols / 3;
+    int preview_col = list_width + GAP + 1;
+
+    for (int r = 1; r <= rows; r++) {
+        printf("\033[%d;1H\033[%dX", r, list_width);
+    }
+
+    clear_preview_area(rows, cols);
+
+    for (int i = 0; i < rows; i++) {
         int real = offset + i;
         if (real >= len) break;
+
         printf("\033[%d;1H", i + 1);
-        
+
         char *name = strrchr(f_list[real], '/');
         name = name ? name + 1 : f_list[real];
 
         if (real == index) {
-            printf(ORANGE "\t%s\n" ESC, name);
-            if (check_dir(f_list[real]) == 1) {
-                strcpy(target_name, f_list[real]);
-            }
+            printf(ORANGE " ");
+            print_name_clipped(name, list_width - 2);
+            printf(ESC);
         } else {
-            printf("\t%s\n", name);
+            printf(" ");
+            print_name_clipped(name, list_width - 2);
         }
+
+        printf("\033[%d;%dH", i + 1, list_width);
     }
-    if (target_name[0] != '\0') {
-        draw_file_preview(target_name, rows, cols);
+
+    if (check_dir(f_list[index]) == 1) {
+        draw_file_preview(f_list[index], rows, cols);
     }
 
     fflush(stdout);
@@ -212,7 +235,6 @@ int list(char *dir, char **f_list) {
     return items_count;
 }
 
-
 int main() {
     setvbuf(stdout, NULL, _IONBF, 0);
     printf("\033[?1049h");
@@ -224,7 +246,7 @@ int main() {
     printf("Current dir: %d\n", items_count);
     enable_raw();
     input_monitor(f_list, items_count);
-    
+
     disable_raw();
     printf("\033[?25h");
     printf("\033[?1049l");
