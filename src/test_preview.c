@@ -15,10 +15,19 @@
 #define CLR_CURSOR_MARKED "\033[30;48;5;214m"
 #define GAP 2
 
-void redraw(char **f_list, int len, int target, int offset, int *marked);
-void print_clipped(const char *s, int max_width);
-int list(char *dir, char **f_list);
+
+int is_binary(const char *path);
+void clear_preview_area(int rows, int cols);
+void get_term_size(int *rows, int *cols);
 void print_name_clipped(const char *name, int width);
+void draw_file_preview(char *filepath, int rows, int cols);
+void print_clipped(const char *s, int max_width);
+int check_dir(char *filename);
+void enable_raw(void);
+void disable_raw(void);
+void input_monitor(char **f_list, int len);
+void redraw(char **f_list, int len, int index, int offset, int *marked);
+int list(char *dir, char **f_list);
 
 char cwd[PATH_MAX];
 struct termios orig;
@@ -119,7 +128,8 @@ int check_dir(char *filename) {
     } else {                                                                                 return -1; // not dir & not file
     }
 }
-                                                                                     void enable_raw(void) {
+
+void enable_raw(void) {
     tcgetattr(STDIN_FILENO, &orig);
     struct termios raw = orig;
     raw.c_lflag &= ~(ECHO | ICANON);
@@ -284,27 +294,6 @@ void redraw(char **f_list, int len, int index, int offset, int *marked) {
             printf(" ");
             print_name_clipped(name, list_width - 2);
         }
-        /*
-        if (real == index) {
-            if (marked[real]) {
-                printf("\033[30;42m ");
-            } else {
-                printf(ORANGE " ");
-            }
-            print_name_clipped(name, list_width - 2);
-            printf(ESC);
-        } else {
-            if (marked[real]) {
-                printf("\033[30;42m ");
-                print_name_clipped(name, list_width - 2);
-                printf(ESC);
-            } else {
-                printf(" ");
-                print_name_clipped(name, list_width - 2);
-            }
-        }
-        */
-
         printf("\033[%d;%dH", i + 1, list_width);
     }
 
