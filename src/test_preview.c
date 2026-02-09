@@ -30,7 +30,7 @@ int check_dir(char *filename);
 void enable_raw(void);
 void disable_raw(void);
 void input_monitor(struct AppState *s);
-void redraw(char **f_list, int len, int index, int offset, int *marked);
+void redraw(struct AppState *s, int index, int offset, int *marked);
 int list(char *dir, char **f_list);
 
 char cwd[PATH_MAX];
@@ -127,7 +127,8 @@ int check_dir(char *filename) {
         return 1; // file
     } else if (S_ISDIR(buf.st_mode)) {
         return 2; // dir
-    } else {                                                                                 return -1; // not dir & not file
+    } else {                                
+        return -1; // not dir & not file
     }
 }
 
@@ -146,10 +147,11 @@ void input_monitor(struct AppState *s) {
     int index = 0;
     int offset = 0; 
     int marked[1024] = {0};
-    redraw(s->f_list, s->len, index, offset, marked);
+    redraw(s, index, offset, marked);
     while (1) {
         char c;
-        if (read(STDIN_FILENO, &c, 1) <= 0) {                                                    continue;
+        if (read(STDIN_FILENO, &c, 1) <= 0) {   
+            continue;
         }
         if (c == '\n') {
             char path[PATH_MAX];
@@ -162,9 +164,9 @@ void input_monitor(struct AppState *s) {
                 }
                 s->len = list(cwd, s->f_list);
                 index = 0;
-                redraw(s->f_list, s->len, index, offset, marked);
+                redraw(s, index, offset, marked);
             } else {
-                redraw(s->f_list, s->len, index, offset, marked);
+                redraw(s, index, offset, marked);
             }
             continue;
         }
@@ -178,7 +180,7 @@ void input_monitor(struct AppState *s) {
                 }
                 s->len = list(cwd, s->f_list);
                 index = 0;
-                redraw(s->f_list, s->len, index, offset, marked);
+                redraw(s, index, offset, marked);
             }
             continue;
         }
@@ -187,7 +189,7 @@ void input_monitor(struct AppState *s) {
         }
         if (c == ' ') {
             marked[index] = !marked[index];
-            redraw(s->f_list, s->len, index, offset, marked);
+            redraw(s, index, offset, marked);
             continue;
         }
         if (c == '\x1b') {
@@ -209,7 +211,7 @@ void input_monitor(struct AppState *s) {
                 if (index < offset) {
                     offset = index;
                 }
-                redraw(s->f_list, s->len, index, offset, marked);
+                redraw(s, index, offset, marked);
             }
 
             if (seq[1] == 'B') {
@@ -222,7 +224,7 @@ void input_monitor(struct AppState *s) {
 
                 if (index >= offset + visible)
                     offset = index - visible + 1;
-                redraw(s->f_list, s->len, index, offset, marked);
+                redraw(s, index, offset, marked);
             }
             if (seq[1] == 'C') {
                 char path[PATH_MAX];
@@ -235,9 +237,9 @@ void input_monitor(struct AppState *s) {
                     }
                     s->len = list(cwd, s->f_list);
                     index = 0;
-                    redraw(s->f_list, s->len, index, offset, marked);
+                    redraw(s, index, offset, marked);
                 } else {
-                    redraw(s->f_list, s->len, index, offset, marked);
+                    redraw(s, index, offset, marked);
                 }
             } 
             if (seq[1] == 'D') {
@@ -249,7 +251,7 @@ void input_monitor(struct AppState *s) {
                     }
                     s->len = list(cwd, s->f_list);
                     index = 0;
-                    redraw(s->f_list, s->len, index, offset, marked);
+                    redraw(s, index, offset, marked);
                 }
                 continue;
             }
@@ -257,8 +259,8 @@ void input_monitor(struct AppState *s) {
     }
 }
 
-void redraw(char **f_list, int len, int index, int offset, int *marked) {
-    if (index >= len) return;
+void redraw(struct AppState *s, int index, int offset, int *marked) {
+    if (index >= s->len) return;
 
     int rows, cols;
     get_term_size(&rows, &cols);
@@ -274,12 +276,12 @@ void redraw(char **f_list, int len, int index, int offset, int *marked) {
 
     for (int i = 0; i < rows; i++) {
         int real = offset + i;
-        if (real >= len) break;
+        if (real >= s->len) break;
 
         printf("\033[%d;1H", i + 1);
 
-        char *name = strrchr(f_list[real], '/');
-        name = name ? name + 1 : f_list[real];
+        char *name = strrchr(s->f_list[real], '/');
+        name = name ? name + 1 : s->f_list[real];
         if (real == index && marked[real]) {
             printf(CLR_CURSOR_MARKED " ");
             print_name_clipped(name, list_width - 2);
@@ -299,8 +301,8 @@ void redraw(char **f_list, int len, int index, int offset, int *marked) {
         printf("\033[%d;%dH", i + 1, list_width);
     }
 
-    if (check_dir(f_list[index]) == 1) {
-        draw_file_preview(f_list[index], rows, cols);
+    if (check_dir(s->f_list[index]) == 1) {
+        draw_file_preview(s->f_list[index], rows, cols);
     }
 
     fflush(stdout);
