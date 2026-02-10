@@ -24,8 +24,17 @@ struct FSState {
     char *cwd;
 };
 
+struct UIState {
+    int rows;
+    int cols;
+    int width_list;
+    int width_preview;
+    int cols_preview;
+};
+
 struct AppState {
     struct FSState fs;
+    struct UIState ui;
 };
 
 int is_binary(const char *path);
@@ -268,19 +277,16 @@ void input_monitor(struct AppState *s) {
 void redraw(struct AppState *s) {
     if (s->fs.index >= s->fs.len) return;
 
-    int rows, cols;
-    get_term_size(&rows, &cols);
+    s->ui.width_list = s->ui.cols / 3;
+    s->ui.cols_preview = s->ui.width_list + GAP + 1;
 
-    int list_width = cols / 3;
-    int preview_col = list_width + GAP + 1;
-
-    for (int r = 1; r <= rows; r++) {
-        printf("\033[%d;1H\033[%dX", r, list_width);
+    for (int r = 1; r <= s->ui.rows; r++) {
+        printf("\033[%d;1H\033[%dX", r, s->ui.width_list);
     }
 
-    clear_preview_area(rows, cols);
+    clear_preview_area(s->ui.rows, s->ui.cols);
 
-    for (int i = 0; i < rows; i++) {
+    for (int i = 0; i < s->ui.rows; i++) {
         int real = s->fs.offset + i;
         if (real >= s->fs.len) break;
 
@@ -290,25 +296,25 @@ void redraw(struct AppState *s) {
         name = name ? name + 1 : s->fs.f_list[real];
         if (real == s->fs.index && s->fs.marked[real]) {
             printf(CLR_CURSOR_MARKED " ");
-            print_name_clipped(name, list_width - 2);
+            print_name_clipped(name, s->ui.width_list - 2);
             printf(CLR_RESET);
         } else if (real == s->fs.index) {
             printf(CLR_CURSOR " ");
-            print_name_clipped(name, list_width - 2);
+            print_name_clipped(name, s->ui.width_list - 2);
             printf(CLR_RESET);
         } else if (s->fs.marked[real]) {
             printf(CLR_MARKED " ");
-            print_name_clipped(name, list_width - 2);
+            print_name_clipped(name, s->ui.width_list - 2);
             printf(CLR_RESET);
         } else {
             printf(" ");
-            print_name_clipped(name, list_width - 2);
+            print_name_clipped(name, s->ui.width_list - 2);
         }
-        printf("\033[%d;%dH", i + 1, list_width);
+        printf("\033[%d;%dH", i + 1, s->ui.width_list);
     }
 
     if (check_dir(s->fs.f_list[s->fs.index]) == 1) {
-        draw_file_preview(s->fs.f_list[s->fs.index], rows, cols);
+        draw_file_preview(s->fs.f_list[s->fs.index], s->ui.rows, s->ui.cols);
     }
 
     fflush(stdout);
@@ -335,6 +341,7 @@ int list(char *dir, char **f_list) {
 
 int main() {
     struct AppState st;
+    get_term_size(&st.ui.rows, &st.ui.cols);
     st.fs.marked = calloc(1024, sizeof(int));
     if (!st.fs.marked) {
         perror("calloc");
