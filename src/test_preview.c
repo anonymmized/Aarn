@@ -39,7 +39,7 @@ struct AppState {
 int is_binary(const char *path);
 void clear_preview_area(struct AppState *s);
 void get_term_size(int *rows, int *cols);
-void print_name_clipped(const char *name, int width);
+void print_name_clipped(const char *name, struct AppState *s);
 void draw_file_preview(char *filepath, int rows, int cols);
 void print_clipped(const char *s, int max_width);
 int check_dir(char *filename);
@@ -90,9 +90,9 @@ void get_term_size(int *rows, int *cols) {
     *cols = w.ws_col;
 }
 
-void print_name_clipped(const char *name, int width) {
+void print_name_clipped(const char *name, struct AppState *s) {
     int i = 0;
-    while (i < width - 1 && name[i] && name[i] != '\n') {
+    while (i < s->ui.width_list - 2 && name[i] && name[i] != '\n') {
         putchar(name[i]);
         i++;
     }
@@ -293,19 +293,19 @@ void redraw(struct AppState *s) {
         name = name ? name + 1 : s->fs.f_list[real];
         if (real == s->fs.index && s->fs.marked[real]) {
             printf(CLR_CURSOR_MARKED " ");
-            print_name_clipped(name, s->ui.width_list - 2);
+            print_name_clipped(name, s);
             printf(CLR_RESET);
         } else if (real == s->fs.index) {
             printf(CLR_CURSOR " ");
-            print_name_clipped(name, s->ui.width_list - 2);
+            print_name_clipped(name, s);
             printf(CLR_RESET);
         } else if (s->fs.marked[real]) {
             printf(CLR_MARKED " ");
-            print_name_clipped(name, s->ui.width_list - 2);
+            print_name_clipped(name, s);
             printf(CLR_RESET);
         } else {
             printf(" ");
-            print_name_clipped(name, s->ui.width_list - 2);
+            print_name_clipped(name, s);
         }
         printf("\033[%d;%dH", i + 1, s->ui.width_list);
     }
