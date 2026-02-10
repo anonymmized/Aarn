@@ -40,7 +40,7 @@ int is_binary(const char *path);
 void clear_preview_area(struct AppState *s);
 void get_term_size(int *rows, int *cols);
 void print_name_clipped(const char *name, struct AppState *s);
-void draw_file_preview(char *filepath, int rows, int cols);
+void draw_file_preview(struct AppState *s);
 void print_clipped(const char *s, int max_width);
 int check_dir(char *filename);
 void enable_raw(void);
@@ -100,22 +100,20 @@ void print_name_clipped(const char *name, struct AppState *s) {
         printf("…");
     }
 }
-void draw_file_preview(char *filepath, int rows, int cols) {
-    int list_width = cols / 3;
-    int preview_col = list_width + GAP + 1;
-    if (is_binary(filepath)) {
-        printf("\033[%d;%dH", 1, preview_col);
+void draw_file_preview(struct AppState *s) {
+    if (is_binary(s->fs.f_list[s->fs.index])) {
+        printf("\033[%d;%dH", 1, s->ui.cols_preview);
         printf("<BINARY FILE>");
         return;
     }
-    FILE *fp = fopen(filepath, "r");
+    FILE *fp = fopen(s->fs.f_list[s->fs.index], "r");
     if (!fp) return;
-    int preview_width = cols - preview_col;
+    int preview_width = s->ui.cols - s->ui.cols_preview;
     char line[4096];
     int row = 1;
     printf("\033[?7l");
-    while (fgets(line, sizeof(line), fp) && row <= rows) {
-        printf("\033[%d;%dH", row, preview_col);
+    while (fgets(line, sizeof(line), fp) && row <= s->ui.rows) {
+        printf("\033[%d;%dH", row, s->ui.cols_preview);
         print_clipped(line, preview_width);
         printf("\033[K");
         row++;
@@ -311,7 +309,7 @@ void redraw(struct AppState *s) {
     }
 
     if (check_dir(s->fs.f_list[s->fs.index]) == 1) {
-        draw_file_preview(s->fs.f_list[s->fs.index], s->ui.rows, s->ui.cols);
+        draw_file_preview(s);
     }
 
     fflush(stdout);
