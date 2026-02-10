@@ -15,12 +15,16 @@
 #define CLR_CURSOR_MARKED "\033[30;48;5;214m"
 #define GAP 2
 
-struct AppState {
-    int len;
+struct FSState {
     char **f_list;
+    int len;
     int index;
     int offset;
     int *marked;
+};
+
+struct AppState {
+    struct FSState fs;
 };
 
 int is_binary(const char *path);
@@ -147,8 +151,8 @@ void disable_raw(void) {
 }
 
 void input_monitor(struct AppState *s) {
-    s->index = 0;
-    s->offset = 0; 
+    s->fs.index = 0;
+    s->fs.offset = 0; 
     redraw(s);
     while (1) {
         char c;
@@ -157,15 +161,15 @@ void input_monitor(struct AppState *s) {
         }
         if (c == '\n') {
             char path[PATH_MAX];
-            snprintf(path, sizeof(path), "%s/%s", cwd, strrchr(s->f_list[s->index], '/') + 1);
+            snprintf(path, sizeof(path), "%s/%s", cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
             if (check_dir(path) == 2) {
                 chdir(path);
                 getcwd(cwd, sizeof(cwd));
-                for (int i = 0; i < s->len; i++) {
-                    free(s->f_list[i]);
+                for (int i = 0; i < s->fs.len; i++) {
+                    free(s->fs.f_list[i]);
                 }
-                s->len = list(cwd, s->f_list);
-                s->index = 0;
+                s->fs.len = list(cwd, s->fs.f_list);
+                s->fs.index = 0;
                 redraw(s);
             } else {
                 redraw(s);
@@ -177,11 +181,11 @@ void input_monitor(struct AppState *s) {
                 chdir("..");
                 getcwd(cwd, sizeof(cwd));
 
-                for (int i = 0; i < s->len; i++) {
-                    free(s->f_list[i]);
+                for (int i = 0; i < s->fs.len; i++) {
+                    free(s->fs.f_list[i]);
                 }
-                s->len = list(cwd, s->f_list);
-                s->index = 0;
+                s->fs.len = list(cwd, s->fs.f_list);
+                s->fs.index = 0;
                 redraw(s);
             }
             continue;
@@ -190,7 +194,7 @@ void input_monitor(struct AppState *s) {
             return;
         }
         if (c == ' ') {
-            s->marked[s->index] = !s->marked[s->index];
+            s->fs.marked[s->fs.index] = !s->fs.marked[s->fs.index];
             redraw(s);
             continue;
         }
@@ -203,42 +207,42 @@ void input_monitor(struct AppState *s) {
             int visible = rows;
 
             if (seq[1] == 'A') {
-                if (s->index > 0) {
-                    s->index--;
+                if (s->fs.index > 0) {
+                    s->fs.index--;
                 } else {
-                    s->index = s->len - 1;
-                    s->offset = s->len - visible;
-                    if (s->offset < 0) s->offset = 0;
+                    s->fs.index = s->fs.len - 1;
+                    s->fs.offset = s->fs.len - visible;
+                    if (s->fs.offset < 0) s->fs.offset = 0;
                 }
-                if (s->index < s->offset) {
-                    s->offset = s->index;
+                if (s->fs.index < s->fs.offset) {
+                    s->fs.offset = s->fs.index;
                 }
                 redraw(s);
             }
 
             if (seq[1] == 'B') {
-                if (s->index < s->len - 1) {
-                    s->index++;
+                if (s->fs.index < s->fs.len - 1) {
+                    s->fs.index++;
                 } else {
-                    s->index = 0;
-                    s->offset = 0;
+                    s->fs.index = 0;
+                    s->fs.offset = 0;
                 }
 
-                if (s->index >= s->offset + visible)
-                    s->offset = s->index - visible + 1;
+                if (s->fs.index >= s->fs.offset + visible)
+                    s->fs.offset = s->fs.index - visible + 1;
                 redraw(s);
             }
             if (seq[1] == 'C') {
                 char path[PATH_MAX];
-                snprintf(path, sizeof(path), "%s/%s", cwd, strrchr(s->f_list[s->index], '/') + 1);
+                snprintf(path, sizeof(path), "%s/%s", cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
                 if (check_dir(path) == 2) {
                     chdir(path);
                     getcwd(cwd, sizeof(cwd));
-                    for (int i = 0; i < s->len; i++) {
-                        free(s->f_list[i]);
+                    for (int i = 0; i < s->fs.len; i++) {
+                        free(s->fs.f_list[i]);
                     }
-                    s->len = list(cwd, s->f_list);
-                    s->index = 0;
+                    s->fs.len = list(cwd, s->fs.f_list);
+                    s->fs.index = 0;
                     redraw(s);
                 } else {
                     redraw(s);
@@ -248,11 +252,11 @@ void input_monitor(struct AppState *s) {
                 if (strcmp(cwd, "/") != 0) {
                     chdir("..");
                     getcwd(cwd, sizeof(cwd));
-                    for (int i = 0; i < s->len; i++) {
-                        free(s->f_list[i]);
+                    for (int i = 0; i < s->fs.len; i++) {
+                        free(s->fs.f_list[i]);
                     }
-                    s->len = list(cwd, s->f_list);
-                    s->index = 0;
+                    s->fs.len = list(cwd, s->fs.f_list);
+                    s->fs.index = 0;
                     redraw(s);
                 }
                 continue;
@@ -262,7 +266,7 @@ void input_monitor(struct AppState *s) {
 }
 
 void redraw(struct AppState *s) {
-    if (s->index >= s->len) return;
+    if (s->fs.index >= s->fs.len) return;
 
     int rows, cols;
     get_term_size(&rows, &cols);
@@ -277,22 +281,22 @@ void redraw(struct AppState *s) {
     clear_preview_area(rows, cols);
 
     for (int i = 0; i < rows; i++) {
-        int real = s->offset + i;
-        if (real >= s->len) break;
+        int real = s->fs.offset + i;
+        if (real >= s->fs.len) break;
 
         printf("\033[%d;1H", i + 1);
 
-        char *name = strrchr(s->f_list[real], '/');
-        name = name ? name + 1 : s->f_list[real];
-        if (real == s->index && s->marked[real]) {
+        char *name = strrchr(s->fs.f_list[real], '/');
+        name = name ? name + 1 : s->fs.f_list[real];
+        if (real == s->fs.index && s->fs.marked[real]) {
             printf(CLR_CURSOR_MARKED " ");
             print_name_clipped(name, list_width - 2);
             printf(CLR_RESET);
-        } else if (real == s->index) {
+        } else if (real == s->fs.index) {
             printf(CLR_CURSOR " ");
             print_name_clipped(name, list_width - 2);
             printf(CLR_RESET);
-        } else if (s->marked[real]) {
+        } else if (s->fs.marked[real]) {
             printf(CLR_MARKED " ");
             print_name_clipped(name, list_width - 2);
             printf(CLR_RESET);
@@ -303,8 +307,8 @@ void redraw(struct AppState *s) {
         printf("\033[%d;%dH", i + 1, list_width);
     }
 
-    if (check_dir(s->f_list[s->index]) == 1) {
-        draw_file_preview(s->f_list[s->index], rows, cols);
+    if (check_dir(s->fs.f_list[s->fs.index]) == 1) {
+        draw_file_preview(s->fs.f_list[s->fs.index], rows, cols);
     }
 
     fflush(stdout);
@@ -331,8 +335,8 @@ int list(char *dir, char **f_list) {
 
 int main() {
     struct AppState st;
-    st.marked = calloc(1024, sizeof(int));
-    if (!st.marked) {
+    st.fs.marked = calloc(1024, sizeof(int));
+    if (!st.fs.marked) {
         perror("calloc");
         return 1;
     }
@@ -344,8 +348,8 @@ int main() {
     getcwd(cwd, sizeof(cwd));
     int items_count = list(cwd, f_list);
     printf("Current dir: %d\n", items_count);
-    st.f_list = f_list;
-    st.len = items_count;
+    st.fs.f_list = f_list;
+    st.fs.len = items_count;
     enable_raw();
     input_monitor(&st);
 
