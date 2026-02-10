@@ -28,7 +28,6 @@ struct UIState {
     int rows;
     int cols;
     int width_list;
-    int width_preview;
     int cols_preview;
 };
 
@@ -38,7 +37,7 @@ struct AppState {
 };
 
 int is_binary(const char *path);
-void clear_preview_area(int rows, int cols);
+void clear_preview_area(struct AppState *s);
 void get_term_size(int *rows, int *cols);
 void print_name_clipped(const char *name, int width);
 void draw_file_preview(char *filepath, int rows, int cols);
@@ -77,11 +76,9 @@ int is_binary(const char *path) {
     return 0;
 }
 
-void clear_preview_area(int rows, int cols) {
-    int list_width = cols / 3;
-    int preview_col = list_width + GAP + 1;
-    for (int r = 1; r <= rows; r++) {
-        printf("\033[%d;%dH\033[K", r, preview_col);
+void clear_preview_area(struct AppState *s) {
+    for (int r = 1; r <= s->ui.rows; r++) {
+        printf("\033[%d;%dH\033[K", r, s->ui.cols_preview);
     }
 }
 
@@ -284,7 +281,7 @@ void redraw(struct AppState *s) {
         printf("\033[%d;1H\033[%dX", r, s->ui.width_list);
     }
 
-    clear_preview_area(s->ui.rows, s->ui.cols);
+    clear_preview_area(s);
 
     for (int i = 0; i < s->ui.rows; i++) {
         int real = s->fs.offset + i;
