@@ -21,6 +21,7 @@ struct FSState {
     int index;
     int offset;
     int *marked;
+    char *cwd;
 };
 
 struct AppState {
@@ -40,7 +41,6 @@ void input_monitor(struct AppState *s);
 void redraw(struct AppState *s);
 int list(char *dir, char **f_list);
 
-char cwd[PATH_MAX];
 struct termios orig;
 
 int is_binary(const char *path) {
@@ -161,14 +161,14 @@ void input_monitor(struct AppState *s) {
         }
         if (c == '\n') {
             char path[PATH_MAX];
-            snprintf(path, sizeof(path), "%s/%s", cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
+            snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
             if (check_dir(path) == 2) {
                 chdir(path);
-                getcwd(cwd, sizeof(cwd));
+                getcwd(s->fs.cwd, sizeof(s->fs.cwd));
                 for (int i = 0; i < s->fs.len; i++) {
                     free(s->fs.f_list[i]);
                 }
-                s->fs.len = list(cwd, s->fs.f_list);
+                s->fs.len = list(s->fs.cwd, s->fs.f_list);
                 s->fs.index = 0;
                 redraw(s);
             } else {
@@ -177,14 +177,14 @@ void input_monitor(struct AppState *s) {
             continue;
         }
         if (c == 127 || c == 8) {
-            if (strcmp(cwd, "/") != 0) {
+            if (strcmp(s->fs.cwd, "/") != 0) {
                 chdir("..");
-                getcwd(cwd, sizeof(cwd));
+                getcwd(s->fs.cwd, PATH_MAX);
 
                 for (int i = 0; i < s->fs.len; i++) {
                     free(s->fs.f_list[i]);
                 }
-                s->fs.len = list(cwd, s->fs.f_list);
+                s->fs.len = list(s->fs.cwd, s->fs.f_list);
                 s->fs.index = 0;
                 redraw(s);
             }
@@ -234,14 +234,14 @@ void input_monitor(struct AppState *s) {
             }
             if (seq[1] == 'C') {
                 char path[PATH_MAX];
-                snprintf(path, sizeof(path), "%s/%s", cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
+                snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
                 if (check_dir(path) == 2) {
                     chdir(path);
-                    getcwd(cwd, sizeof(cwd));
+                    getcwd(s->fs.cwd, PATH_MAX);
                     for (int i = 0; i < s->fs.len; i++) {
                         free(s->fs.f_list[i]);
                     }
-                    s->fs.len = list(cwd, s->fs.f_list);
+                    s->fs.len = list(s->fs.cwd, s->fs.f_list);
                     s->fs.index = 0;
                     redraw(s);
                 } else {
@@ -249,13 +249,13 @@ void input_monitor(struct AppState *s) {
                 }
             } 
             if (seq[1] == 'D') {
-                if (strcmp(cwd, "/") != 0) {
+                if (strcmp(s->fs.cwd, "/") != 0) {
                     chdir("..");
-                    getcwd(cwd, sizeof(cwd));
+                    getcwd(s->fs.cwd, PATH_MAX);
                     for (int i = 0; i < s->fs.len; i++) {
                         free(s->fs.f_list[i]);
                     }
-                    s->fs.len = list(cwd, s->fs.f_list);
+                    s->fs.len = list(s->fs.cwd, s->fs.f_list);
                     s->fs.index = 0;
                     redraw(s);
                 }
@@ -340,14 +340,14 @@ int main() {
         perror("calloc");
         return 1;
     }
+    st.fs.cwd = malloc(PATH_MAX);
     setvbuf(stdout, NULL, _IONBF, 0);
     printf("\033[?1049h");
     printf("\033[?25l");
     fflush(stdout);
     char *f_list[100];
-    getcwd(cwd, sizeof(cwd));
-    int items_count = list(cwd, f_list);
-    printf("Current dir: %d\n", items_count);
+    getcwd(st.fs.cwd, PATH_MAX);
+    int items_count = list(st.fs.cwd, f_list);
     st.fs.f_list = f_list;
     st.fs.len = items_count;
     enable_raw();
