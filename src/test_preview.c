@@ -20,6 +20,7 @@ struct FSState {
     int len;
     int index;
     int offset;
+    int real;
     int *marked;
     char *cwd;
 };
@@ -36,23 +37,23 @@ struct AppState {
     struct UIState ui;
 };
 
-int is_binary(const char *path);
+int is_binary(struct AppState *s);
 void clear_preview_area(struct AppState *s);
 void get_term_size(int *rows, int *cols);
-void print_name_clipped(struct AppState *s, int real);
+void print_name_clipped(struct AppState *s);
 void draw_file_preview(struct AppState *s);
-void print_clipped(const char *s, int max_width);
+void print_line_clipped(const char *s, int max_width);
 int check_dir(char *filename);
 void enable_raw(void);
 void disable_raw(void);
 void input_monitor(struct AppState *s);
 void redraw(struct AppState *s);
-int list(char *dir, char **f_list);
+int list(struct AppState *s);
 
 struct termios orig;
 
-int is_binary(const char *path) {
-    FILE *fp = fopen(path, "rb");
+int is_binary(struct AppState *s) {
+    FILE *fp = fopen(s->fs.f_list[s->fs.index], "rb");
     if (!fp) return 1;
     unsigned char buf[512];
     size_t n = fread(buf, 1, sizeof(buf), fp);
@@ -60,7 +61,7 @@ int is_binary(const char *path) {
     for (size_t i = 0; i < n; i++) {
         if (buf[i] == 0) return 1;
     }
-    const char *ext = strrchr(path, '.');
+    const char *ext = strrchr(s->fs.f_list[s->fs.index], '.');
     if (!ext) return 0;
 
     if (!strcmp(ext, ".pdf")) return 1;
@@ -90,10 +91,10 @@ void get_term_size(int *rows, int *cols) {
     *cols = w.ws_col;
 }
 
-void print_name_clipped(struct AppState *s, int real) {
+void print_name_clipped(struct AppState *s) {
     int i = 0;
-    char *name = strrchr(s->fs.f_list[real], '/');
-    name = name ? name + 1 : s->fs.f_list[real];
+    char *name = strrchr(s->fs.f_list[s->fs.real], '/');
+    name = name ? name + 1 : s->fs.f_list[s->fs.real];
     while (i < s->ui.width_list - 2 && name[i] && name[i] != '\n') {
         putchar(name[i]);
         i++;
@@ -103,7 +104,7 @@ void print_name_clipped(struct AppState *s, int real) {
     }
 }
 void draw_file_preview(struct AppState *s) {
-    if (is_binary(s->fs.f_list[s->fs.index])) {
+    if (is_binary(s)) {
         printf("\033[%d;%dH", 1, s->ui.cols_preview);
         printf("<BINARY FILE>");
         return;
@@ -116,7 +117,7 @@ void draw_file_preview(struct AppState *s) {
     printf("\033[?7l");
     while (fgets(line, sizeof(line), fp) && row <= s->ui.rows) {
         printf("\033[%d;%dH", row, s->ui.cols_preview);
-        print_clipped(line, preview_width);
+        print_line_clipped(line, preview_width);
         printf("\033[K");
         row++;
     }
@@ -125,7 +126,7 @@ void draw_file_preview(struct AppState *s) {
 }
 
 
-void print_clipped(const char *s, int max_width) {
+void print_line_clipped(const char *s, int max_width) {
     for (int i = 0; i < max_width && s[i] && s[i] != '\n'; i++) {
         putchar(s[i]);
     }
@@ -169,12 +170,14 @@ void input_monitor(struct AppState *s) {
             char path[PATH_MAX];
             snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
             if (check_dir(path) == 2) {
-                chdir(path);
-                getcwd(s->fs.cwd, sizeof(s->fs.cwd));
+                if (!chdir(path)) {
+                    continue;
+                }
+                getcwd(s->fs.cwd, PATH_MAX);
                 for (int i = 0; i < s->fs.len; i++) {
                     free(s->fs.f_list[i]);
                 }
-                s->fs.len = list(s->fs.cwd, s->fs.f_list);
+                s->fs.len = list(s);
                 s->fs.index = 0;
                 redraw(s);
             } else {
@@ -190,7 +193,7 @@ void input_monitor(struct AppState *s) {
                 for (int i = 0; i < s->fs.len; i++) {
                     free(s->fs.f_list[i]);
                 }
-                s->fs.len = list(s->fs.cwd, s->fs.f_list);
+                s->fs.len = list(s);
                 s->fs.index = 0;
                 redraw(s);
             }
@@ -242,17 +245,20 @@ void input_monitor(struct AppState *s) {
                 char path[PATH_MAX];
                 snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
                 if (check_dir(path) == 2) {
-                    chdir(path);
+                    if (!chdir(path)) {
+                        continue;
+                    }
                     getcwd(s->fs.cwd, PATH_MAX);
                     for (int i = 0; i < s->fs.len; i++) {
                         free(s->fs.f_list[i]);
                     }
-                    s->fs.len = list(s->fs.cwd, s->fs.f_list);
+                    s->fs.len = list(s);
                     s->fs.index = 0;
                     redraw(s);
                 } else {
                     redraw(s);
                 }
+                continue;
             } 
             if (seq[1] == 'D') {
                 if (strcmp(s->fs.cwd, "/") != 0) {
@@ -261,7 +267,7 @@ void input_monitor(struct AppState *s) {
                     for (int i = 0; i < s->fs.len; i++) {
                         free(s->fs.f_list[i]);
                     }
-                    s->fs.len = list(s->fs.cwd, s->fs.f_list);
+                    s->fs.len = list(s);
                     s->fs.index = 0;
                     redraw(s);
                 }
@@ -284,26 +290,26 @@ void redraw(struct AppState *s) {
     clear_preview_area(s);
 
     for (int i = 0; i < s->ui.rows; i++) {
-        int real = s->fs.offset + i;
-        if (real >= s->fs.len) break;
+        s->fs.real = s->fs.offset + i;
+        if (s->fs.real >= s->fs.len) break;
 
         printf("\033[%d;1H", i + 1);
 
-        if (real == s->fs.index && s->fs.marked[real]) {
+        if (s->fs.real == s->fs.index && s->fs.marked[s->fs.real]) {
             printf(CLR_CURSOR_MARKED " ");
-            print_name_clipped(s, real);
+            print_name_clipped(s);
             printf(CLR_RESET);
-        } else if (real == s->fs.index) {
+        } else if (s->fs.real == s->fs.index) {
             printf(CLR_CURSOR " ");
-            print_name_clipped(s, real);
+            print_name_clipped(s);
             printf(CLR_RESET);
-        } else if (s->fs.marked[real]) {
+        } else if (s->fs.marked[s->fs.real]) {
             printf(CLR_MARKED " ");
-            print_name_clipped(s, real);
+            print_name_clipped(s);
             printf(CLR_RESET);
         } else {
             printf(" ");
-            print_name_clipped(s, real);
+            print_name_clipped(s);
         }
         printf("\033[%d;%dH", i + 1, s->ui.width_list);
     }
@@ -315,8 +321,8 @@ void redraw(struct AppState *s) {
     fflush(stdout);
 }
 
-int list(char *dir, char **f_list) {
-    DIR *wdir = opendir(dir);
+int list(struct AppState *s) {
+    DIR *wdir = opendir(s->fs.cwd);
     if (!wdir) {
         fprintf(stderr, "Error wit opening dir\n");
         return 0;
@@ -326,9 +332,9 @@ int list(char *dir, char **f_list) {
     while ((ent = readdir(wdir)) != NULL) {
         if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
         char fullpath[1024];
-        snprintf(fullpath, sizeof(fullpath), "%s/%s", dir, ent->d_name);
-        f_list[items_count] = malloc(strlen(fullpath) + 1);
-        strcpy(f_list[items_count++], fullpath);
+        snprintf(fullpath, sizeof(fullpath), "%s/%s", s->fs.cwd, ent->d_name);
+        s->fs.f_list[items_count] = malloc(strlen(fullpath) + 1);
+        strcpy(s->fs.f_list[items_count++], fullpath);
     }
     closedir(wdir);
     return items_count;
@@ -349,8 +355,9 @@ int main() {
     fflush(stdout);
     char *f_list[100];
     getcwd(st.fs.cwd, PATH_MAX);
-    int items_count = list(st.fs.cwd, f_list);
     st.fs.f_list = f_list;
+    int items_count = list(&st);
+    // int items_count = list(st.fs.cwd, f_list);
     st.fs.len = items_count;
     enable_raw();
     input_monitor(&st);
@@ -362,5 +369,6 @@ int main() {
     for (int i = 0; i < items_count; i++) {
         free(f_list[i]);
     }
+    free(st.fs.marked);
     return 0;
 }
