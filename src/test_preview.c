@@ -41,7 +41,7 @@ struct RuntimeState {
      * 0 - normal
      * 1 - search 
      */
-}
+};
 
 struct AppState {
     struct FSState fs;
@@ -215,7 +215,7 @@ void input_monitor(struct AppState *s) {
             continue;
         }
         if (c == 'q') {
-            s->st.launched = 0;
+            s->rt.launched = 0;
             return;
         }
         if (c == ' ') {
@@ -227,9 +227,7 @@ void input_monitor(struct AppState *s) {
             char seq[2];
             if (read(STDIN_FILENO, &seq[0], 1) <= 0) continue;
             if (read(STDIN_FILENO, &seq[1], 1) <= 0) continue;
-            int rows, cols;
-            get_term_size(&rows, &cols);
-            int visible = rows;
+            int visible = s->ui.rows;
 
             if (seq[1] == 'A') {
                 s->rt.last_key = 'U';
@@ -299,6 +297,7 @@ void input_monitor(struct AppState *s) {
 }
 
 void redraw(struct AppState *s) {
+
     if (s->fs.index >= s->fs.len) return;
 
     s->ui.width_list = s->ui.cols / 3;
@@ -338,7 +337,8 @@ void redraw(struct AppState *s) {
     if (check_dir(s->fs.f_list[s->fs.index]) == 1) {
         draw_file_preview(s);
     }
-
+    printf("\033[%d;1H", s->ui.rows + 2);
+    printf("Mode: %d", s->rt.mode);
     fflush(stdout);
 }
 
@@ -364,6 +364,7 @@ int list(struct AppState *s) {
 int main() {
     struct AppState st;
     get_term_size(&st.ui.rows, &st.ui.cols);
+    st.ui.rows -= 2;
     st.fs.marked = calloc(1024, sizeof(int));
     if (!st.fs.marked) {
         perror("calloc");
