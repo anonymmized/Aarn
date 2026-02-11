@@ -28,6 +28,7 @@ struct FSState {
 struct UIState {
     int rows;
     int cols;
+    int footer_row;
     int width_list;
     int cols_preview;
 };
@@ -61,8 +62,24 @@ void disable_raw(void);
 void input_monitor(struct AppState *s);
 void redraw(struct AppState *s);
 int list(struct AppState *s);
+void draw_statusbar(struct AppState *s);
 
 struct termios orig;
+
+void draw_statusbar(struct AppState *s) {
+    printf("\033[%d;1H\033[K", s->ui.footer_row);
+    printf("Mode: ");
+    switch (s->rt.mode) {
+        case 0:
+            printf("Normal");
+            break;
+        case 1:
+            printf("Search");
+            break;
+    }
+    printf("\033[%d;1H\033[K", s->ui.rows + 2);
+    printf("%s", s->fs.cwd);
+}
 
 int is_binary(struct AppState *s) {
     FILE *fp = fopen(s->fs.f_list[s->fs.index], "rb");
@@ -185,7 +202,7 @@ void input_monitor(struct AppState *s) {
             char path[PATH_MAX];
             snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
             if (check_dir(path) == 2) {
-                if (!chdir(path)) {
+                if (chdir(path) == -1) {
                     continue;
                 }
                 getcwd(s->fs.cwd, PATH_MAX);
@@ -194,6 +211,7 @@ void input_monitor(struct AppState *s) {
                 }
                 s->fs.len = list(s);
                 s->fs.index = 0;
+                memset(s->fs.marked, 0, s->fs.len * sizeof(int));
                 redraw(s);
             } else {
                 redraw(s);
@@ -210,6 +228,7 @@ void input_monitor(struct AppState *s) {
                 }
                 s->fs.len = list(s);
                 s->fs.index = 0;
+                memset(s->fs.marked, 0, s->fs.len * sizeof(int));
                 redraw(s);
             }
             continue;
@@ -262,7 +281,7 @@ void input_monitor(struct AppState *s) {
                 char path[PATH_MAX];
                 snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
                 if (check_dir(path) == 2) {
-                    if (!chdir(path)) {
+                    if (chdir(path) == -1) {
                         continue;
                     }
                     getcwd(s->fs.cwd, PATH_MAX);
@@ -271,6 +290,7 @@ void input_monitor(struct AppState *s) {
                     }
                     s->fs.len = list(s);
                     s->fs.index = 0;
+                    memset(s->fs.marked, 0, s->fs.len * sizeof(int));
                     redraw(s);
                 } else {
                     redraw(s);
@@ -287,6 +307,7 @@ void input_monitor(struct AppState *s) {
                     }
                     s->fs.len = list(s);
                     s->fs.index = 0;
+                    memset(s->fs.marked, 0, s->fs.len * sizeof(int));
                     redraw(s);
                 }
                 continue;
@@ -337,8 +358,7 @@ void redraw(struct AppState *s) {
     if (check_dir(s->fs.f_list[s->fs.index]) == 1) {
         draw_file_preview(s);
     }
-    printf("\033[%d;1H", s->ui.rows + 2);
-    printf("Mode: %d", s->rt.mode);
+    draw_statusbar(s);
     fflush(stdout);
 }
 
@@ -365,6 +385,7 @@ int main() {
     struct AppState st;
     get_term_size(&st.ui.rows, &st.ui.cols);
     st.ui.rows -= 2;
+    st.ui.footer_row = st.ui.rows + 1;
     st.fs.marked = calloc(1024, sizeof(int));
     if (!st.fs.marked) {
         perror("calloc");
@@ -379,7 +400,6 @@ int main() {
     getcwd(st.fs.cwd, PATH_MAX);
     st.fs.f_list = f_list;
     int items_count = list(&st);
-    // int items_count = list(st.fs.cwd, f_list);
     st.fs.len = items_count;
     enable_raw();
     input_monitor(&st);
