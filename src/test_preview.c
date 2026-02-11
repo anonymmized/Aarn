@@ -32,9 +32,21 @@ struct UIState {
     int cols_preview;
 };
 
+struct RuntimeState {
+    int launched;
+    char last_key;
+    int mode;
+    /*
+     * modes: 
+     * 0 - normal
+     * 1 - search 
+     */
+}
+
 struct AppState {
     struct FSState fs;
     struct UIState ui;
+    struct RuntimeState rt;
 };
 
 int is_binary(struct AppState *s);
@@ -160,12 +172,15 @@ void disable_raw(void) {
 void input_monitor(struct AppState *s) {
     s->fs.index = 0;
     s->fs.offset = 0; 
+    s->rt.launched = 1;
+    s->rt.mode = 0;
     redraw(s);
     while (1) {
         char c;
         if (read(STDIN_FILENO, &c, 1) <= 0) {   
             continue;
         }
+        s->rt.last_key = c;
         if (c == '\n') {
             char path[PATH_MAX];
             snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
@@ -200,6 +215,7 @@ void input_monitor(struct AppState *s) {
             continue;
         }
         if (c == 'q') {
+            s->st.launched = 0;
             return;
         }
         if (c == ' ') {
@@ -216,6 +232,7 @@ void input_monitor(struct AppState *s) {
             int visible = rows;
 
             if (seq[1] == 'A') {
+                s->rt.last_key = 'U';
                 if (s->fs.index > 0) {
                     s->fs.index--;
                 } else {
@@ -230,6 +247,7 @@ void input_monitor(struct AppState *s) {
             }
 
             if (seq[1] == 'B') {
+                s->rt.last_key = 'D';
                 if (s->fs.index < s->fs.len - 1) {
                     s->fs.index++;
                 } else {
@@ -242,6 +260,7 @@ void input_monitor(struct AppState *s) {
                 redraw(s);
             }
             if (seq[1] == 'C') {
+                s->rt.last_key = 'R';
                 char path[PATH_MAX];
                 snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
                 if (check_dir(path) == 2) {
@@ -261,6 +280,7 @@ void input_monitor(struct AppState *s) {
                 continue;
             } 
             if (seq[1] == 'D') {
+                s->rt.last_key = 'L';
                 if (strcmp(s->fs.cwd, "/") != 0) {
                     chdir("..");
                     getcwd(s->fs.cwd, PATH_MAX);
@@ -275,6 +295,7 @@ void input_monitor(struct AppState *s) {
             }
         }
     }
+    s->rt.launched = 0;
 }
 
 void redraw(struct AppState *s) {
