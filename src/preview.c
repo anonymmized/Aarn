@@ -31,6 +31,21 @@ void draw_statusbar(struct AppState *s) {
     }
     if (s->rt.mode != 2) {
         printf("\033[%d;15HLk: %c", s->ui.footer_row, s->rt.last_key);
+        printf("\033[%d;25H%d|%d", s->ui.footer_row, s->fs.index + 1, s->fs.len);
+        char path[PATH_MAX];
+        snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
+        char *dot = strrchr(path, '.');
+        if (dot) dot += 1;
+        else dot = "";
+        struct stat st;
+        if (stat(path, &st) == 0) {
+            if (S_ISDIR(st.st_mode)) {
+                printf("\033[%d;40H\033[37;40mDIR\033[0m", s->ui.footer_row);
+            }
+            if (S_ISREG(st.st_mode)) {
+                printf("\033[%d;40H\033[37;40m%s\033[0m", s->ui.footer_row, dot);
+            }
+        }
         printf("\033[%d;1H\033[K", s->ui.rows + 2);
         printf("%s", s->fs.cwd);
     }

@@ -49,5 +49,6 @@ void print_name_clipped(struct AppState *s);
 void input_monitor(struct AppState *s);
 void redraw(struct AppState *s);
 void draw_statusbar(struct AppState *s);
+int is_dir(const char *path);
 
 #endif
