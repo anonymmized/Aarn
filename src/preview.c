@@ -32,11 +32,11 @@ void draw_statusbar(struct AppState *s) {
     if (s->rt.mode != 2) {
         printf("\033[%d;15HLk: %c", s->ui.footer_row, s->rt.last_key);
         printf("\033[%d;25H%d|%d", s->ui.footer_row, s->fs.index + 1, s->fs.len);
-        char path[PATH_MAX];
-        snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
-        char *dot = strrchr(path, '.');
-        if (dot) dot += 1;
-        else dot = "";
+        const char *path = s->fs.f_list[s->fs.index];
+        const char *name = strrchr(path, '/');
+        name = name ? name + 1 : path;
+        char *dot = strrchr(name, '.');
+        if (!dot || dot == name) dot = "";
         struct stat st;
         if (stat(path, &st) == 0) {
             if (S_ISDIR(st.st_mode)) {
@@ -131,7 +131,7 @@ void print_line_clipped(const char *s, int max_width) {
     }
 }
 
-int check_dir(char *filename) {
+int check_dir(const char *filename) {
     struct stat buf;
     if (stat(filename, &buf) != 0) {
         return -1;
@@ -159,9 +159,8 @@ void input_monitor(struct AppState *s) {
         s->rt.last_key = c;
         if (c == '\n') {
             s->rt.last_key = 'E';
-            char path[PATH_MAX];
+            const char *path = s->fs.f_list[s->fs.index];
             if (fs_empty(s)) continue;
-            snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
             if (check_dir(path) == 2) {
                 if (chdir(path) == -1) {
                     continue;
@@ -174,7 +173,8 @@ void input_monitor(struct AppState *s) {
                 if (fs_empty(s)) continue;
                 s->fs.index = 0;
                 s->fs.offset = 0;
-                memset(s->fs.marked, 0, s->fs.len * sizeof(int));
+                memset(s->fs.marked, 0, 1024 * sizeof(int));
+                s->fs.marked_len = 0;
                 redraw(s);
             } else {
                 redraw(s);
@@ -195,7 +195,8 @@ void input_monitor(struct AppState *s) {
                 if (fs_empty(s)) continue;
                 s->fs.index = 0;
                 s->fs.offset = 0;
-                memset(s->fs.marked, 0, s->fs.len * sizeof(int));
+                memset(s->fs.marked, 0, 1024 * sizeof(int));
+                s->fs.marked_len = 0;
                 redraw(s);
             }
             continue;
@@ -207,13 +208,9 @@ void input_monitor(struct AppState *s) {
         }
         if (c == ' ') {
             s->rt.last_key = 'S';
-            if (s->fs.marked[s->fs.index]) {
-                s->fs.marked[s->fs.index] = !s->fs.marked[s->fs.index];
-                s->fs.marked_len -= 1;
-            } else {
-                s->fs.marked[s->fs.index] = !s->fs.marked[s->fs.index];
-                s->fs.marked_len += 1;
-            }
+            s->fs.marked[s->fs.index] ^= 1;
+            if (s->fs.marked[s->fs.index]) s->fs.marked_len++;
+            else s->fs.marked_len--;
             s->rt.mode = 2;
             redraw(s);
             continue;
@@ -255,9 +252,8 @@ void input_monitor(struct AppState *s) {
             if (seq[1] == 'C') {
                 s->rt.mode = 0;
                 s->rt.last_key = 'R';
-                char path[PATH_MAX];
+                const char *path = s->fs.f_list[s->fs.index];
                 if (fs_empty(s)) continue;
-                snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
                 if (check_dir(path) == 2) {
                     if (chdir(path) == -1) {
                         continue;
@@ -269,7 +265,8 @@ void input_monitor(struct AppState *s) {
                     s->fs.len = list(s);
                     s->fs.index = 0;
                     s->fs.offset = 0;
-                    memset(s->fs.marked, 0, s->fs.len * sizeof(int));
+                    memset(s->fs.marked, 0, 1024 * sizeof(int));
+                    s->fs.marked_len = 0;
                     redraw(s);
                 } else {
                     redraw(s);
@@ -289,7 +286,8 @@ void input_monitor(struct AppState *s) {
                     if (fs_empty(s)) continue;
                     s->fs.index = 0;
                     s->fs.offset = 0;
-                    memset(s->fs.marked, 0, s->fs.len * sizeof(int));
+                    memset(s->fs.marked, 0, 1024 * sizeof(int));
+                    s->fs.marked_len = 0;
                     redraw(s);
                 }
                 continue;

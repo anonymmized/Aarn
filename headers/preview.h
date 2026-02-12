@@ -40,7 +40,7 @@ struct AppState {
 };
 void print_line_clipped(const char *s, int max_width);
 int is_binary(struct AppState *s);
-int check_dir(char *filename);
+int check_dir(const char *filename);
 int list(struct AppState *s);
 void get_term_size(int *rows, int *cols);
 int fs_empty(struct AppState *s);
@@ -49,6 +49,5 @@ void print_name_clipped(struct AppState *s);
 void input_monitor(struct AppState *s);
 void redraw(struct AppState *s);
 void draw_statusbar(struct AppState *s);
-int is_dir(const char *path);
 
 #endif
