@@ -24,9 +24,16 @@ void draw_statusbar(struct AppState *s) {
         case 1:
             printf("Search");
             break;
+        case 2:
+            printf("\033[%d;1H\033[K", s->ui.footer_row + 1);
+            printf("\033[%d;1HMarked [%d]", s->ui.footer_row, s->fs.marked_len);
+            break;
     }
-    printf("\033[%d;1H\033[K", s->ui.rows + 2);
-    printf("%s", s->fs.cwd);
+    if (s->rt.mode != 2) {
+        printf("\033[%d;20HLk: %s", s->ui.footer_row, s->rt.last_key);
+        printf("\033[%d;1H\033[K", s->ui.rows + 2);
+        printf("%s", s->fs.cwd);
+    }
 }
 
 int is_binary(struct AppState *s) {
@@ -134,7 +141,7 @@ void input_monitor(struct AppState *s) {
         if (read(STDIN_FILENO, &c, 1) <= 0) {   
             continue;
         }
-        s->rt.last_key = c;
+        strcpy(s->rt.last_key, &c);
         if (c == '\n') {
             char path[PATH_MAX];
             if (fs_empty(s)) continue;
@@ -159,6 +166,7 @@ void input_monitor(struct AppState *s) {
             continue;
         }
         if (c == 127 || c == 8) {
+            s->rt.mode = 0;
             if (strcmp(s->fs.cwd, "/") != 0) {
                 chdir("..");
                 getcwd(s->fs.cwd, PATH_MAX);
@@ -180,7 +188,15 @@ void input_monitor(struct AppState *s) {
             return;
         }
         if (c == ' ') {
-            s->fs.marked[s->fs.index] = !s->fs.marked[s->fs.index];
+            strcpy(s->rt.last_key, "space");
+            if (s->fs.marked[s->fs.index]) {
+                s->fs.marked[s->fs.index] = !s->fs.marked[s->fs.index];
+                s->fs.marked_len -= 1;
+            } else {
+                s->fs.marked[s->fs.index] = !s->fs.marked[s->fs.index];
+                s->fs.marked_len += 1;
+            }
+            s->rt.mode = 2;
             redraw(s);
             continue;
         }
@@ -191,7 +207,7 @@ void input_monitor(struct AppState *s) {
             int visible = s->ui.rows;
 
             if (seq[1] == 'A') {
-                s->rt.last_key = 'U';
+                strcpy(s->rt.last_key, "U");
                 if (s->fs.index > 0) {
                     s->fs.index--;
                 } else {
@@ -206,7 +222,7 @@ void input_monitor(struct AppState *s) {
             }
 
             if (seq[1] == 'B') {
-                s->rt.last_key = 'D';
+                strcpy(s->rt.last_key, "D");
                 if (s->fs.index < s->fs.len - 1) {
                     s->fs.index++;
                 } else {
@@ -219,7 +235,8 @@ void input_monitor(struct AppState *s) {
                 redraw(s);
             }
             if (seq[1] == 'C') {
-                s->rt.last_key = 'R';
+                s->rt.mode = 0;
+                strcpy(s->rt.last_key, "R");
                 char path[PATH_MAX];
                 if (fs_empty(s)) continue;
                 snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
@@ -242,7 +259,8 @@ void input_monitor(struct AppState *s) {
                 continue;
             } 
             if (seq[1] == 'D') {
-                s->rt.last_key = 'L';
+                s->rt.mode = 0;
+                strcpy(s->rt.last_key, "L");
                 if (strcmp(s->fs.cwd, "/") != 0) {
                     chdir("..");
                     getcwd(s->fs.cwd, PATH_MAX);

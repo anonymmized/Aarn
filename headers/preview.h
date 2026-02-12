@@ -15,6 +15,7 @@ struct FSState {
     int offset;
     int real;
     int *marked;
+    int marked_len;
     char *cwd;
 };
 
@@ -28,7 +29,7 @@ struct UIState {
 
 struct RuntimeState {
     int launched;
-    char last_key;
+    char *last_key;
     int mode;
 };
 

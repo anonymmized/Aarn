@@ -54,6 +54,8 @@ int main() {
         switch (output_code) {
             case CMD_preview: {
                 struct AppState st;
+                st.rt.last_key = calloc(50, sizeof(char));
+                st.fs.marked_len = 0;
                 get_term_size(&st.ui.rows, &st.ui.cols);
                 st.ui.rows -= 2;
                 st.ui.footer_row = st.ui.rows + 1;
