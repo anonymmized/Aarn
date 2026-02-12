@@ -15,7 +15,8 @@ Cmd cmds[] = {
     {"cat", CMD_cat},
     {"rm", CMD_rm},
     {"mkdir", CMD_mkdir},
-    {"touch", CMD_touch}
+    {"touch", CMD_touch},
+    {"preview", CMD_preview}
 };
 
 struct termios orig;
@@ -42,7 +43,7 @@ char *read_command_line(char **history, int *index, int *history_len, const char
     int len = 0;
 
     buf[0] = '\0';
-    redraw(buf, workin_dir, cursor);
+    rredraw(buf, workin_dir, cursor);
     while (1) {
         char c;
         if (read(STDIN_FILENO, &c, 1) <= 0) {
@@ -51,14 +52,14 @@ char *read_command_line(char **history, int *index, int *history_len, const char
         
         if (c == 23) {
             delete_word(buf, &cursor, &len);
-            redraw(buf, workin_dir, cursor);
+            rredraw(buf, workin_dir, cursor);
             continue;
         }
         if (c == 21) {
             cursor = 0;
             buf[0] = '\0';
             len = 0;
-            redraw(buf, workin_dir, cursor);
+            rredraw(buf, workin_dir, cursor);
             continue;
         }
 
@@ -76,7 +77,7 @@ char *read_command_line(char **history, int *index, int *history_len, const char
             cursor--;
             len--;
             buf[len] = '\0';
-            redraw(buf, workin_dir, cursor);
+            rredraw(buf, workin_dir, cursor);
         } else if (c == '\x1b') {
             char seq[2];
             if (read(STDIN_FILENO, &seq[0], 1) <= 0) {
@@ -94,7 +95,7 @@ char *read_command_line(char **history, int *index, int *history_len, const char
                         buf[0] = '\0';
                     }
                     len = cursor = strlen(buf);
-                    redraw(buf, workin_dir, cursor);
+                    rredraw(buf, workin_dir, cursor);
                 }
             }
             if (seq[1] == 'B') {
@@ -111,15 +112,15 @@ char *read_command_line(char **history, int *index, int *history_len, const char
                     len = cursor = 0;
                     buf[0] = '\0';
                 }
-                redraw(buf, workin_dir, cursor);
+                rredraw(buf, workin_dir, cursor);
             }
             if (seq[1] == 'D' && cursor > 0) {
                 cursor--;
-                redraw(buf, workin_dir, cursor);
+                rredraw(buf, workin_dir, cursor);
             }
             if (seq[1] == 'C' && cursor < len) {
                 cursor++;
-                redraw(buf, workin_dir, cursor);
+                rredraw(buf, workin_dir, cursor);
             }
         } 
         if (c >= 32 && c < 127 && len < (int)sizeof(buf) - 1) {
@@ -128,7 +129,7 @@ char *read_command_line(char **history, int *index, int *history_len, const char
             cursor++;
             len++;
             buf[len] = '\0';
-            redraw(buf, workin_dir, cursor);
+            rredraw(buf, workin_dir, cursor);
         }
     }
 }
@@ -144,7 +145,7 @@ void disable_raw(void) {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig);
 }
 
-void redraw(const char *buf, const char *workin_dir, int cursor) {
+void rredraw(const char *buf, const char *workin_dir, int cursor) {
     int len = strlen(buf);
     printf("\r\033[K%s> ", workin_dir);
     for (int i = 0; i < len; i++) {
@@ -205,7 +206,7 @@ int get_command_id(char *line) {
         return -10;
     }
     char *command = argv[0];
-    for (int i = 0; i < 9; i++) {
+    for (int i = 0; i < 10; i++) {
         if (strcmp(command, cmds[i].name) == 0) return cmds[i].id;
     }
     return -1;

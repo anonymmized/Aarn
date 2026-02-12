@@ -1,7 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-enum Commands {CMD_exit, CMD_pwd, CMD_ls, CMD_cd, CMD_clear, CMD_cat, CMD_rm, CMD_mkdir, CMD_touch};
+enum Commands {CMD_exit, CMD_pwd, CMD_ls, CMD_cd, CMD_clear, CMD_cat, CMD_rm, CMD_mkdir, CMD_touch, CMD_preview};
 
 typedef struct {
     const char *name;
@@ -24,7 +24,7 @@ const char *return_last_dir(const char *workin);
 Count dir_items(const char *dirname);
 void enable_raw(void);
 void disable_raw(void);
-void redraw(const char *buf, const char *workin_dir, int cursor);
+void rredraw(const char *buf, const char *workin_dir, int cursor);
 void delete_word(char *buf, int *cursor, int *len);
 char *read_command_line(char **history, int *index, int *history_len, const char *workin_dir);
 

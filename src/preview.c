@@ -1,3 +1,5 @@
+#include "../headers/preview.h"
+#include "../headers/utils.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -7,65 +9,6 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-
-#define CLR_RESET         "\033[0m"
-#define CLR_NORMAL        ""
-#define CLR_CURSOR        "\033[38;5;214m"
-#define CLR_MARKED        "\033[30;48;5;148m"
-#define CLR_CURSOR_MARKED "\033[30;48;5;214m"
-#define GAP 2
-
-struct FSState {
-    char **f_list;
-    int len;
-    int index;
-    int offset;
-    int real;
-    int *marked;
-    char *cwd;
-};
-
-struct UIState {
-    int rows;
-    int cols;
-    int footer_row;
-    int width_list;
-    int cols_preview;
-};
-
-struct RuntimeState {
-    int launched;
-    char last_key;
-    int mode;
-    /*
-     * modes: 
-     * 0 - normal
-     * 1 - search 
-     */
-};
-
-struct AppState {
-    struct FSState fs;
-    struct UIState ui;
-    struct RuntimeState rt;
-};
-
-int is_binary(struct AppState *s);
-void clear_preview_area(struct AppState *s);
-void get_term_size(int *rows, int *cols);
-void print_name_clipped(struct AppState *s);
-void draw_file_preview(struct AppState *s);
-void print_line_clipped(const char *s, int max_width);
-int check_dir(char *filename);
-void enable_raw(void);
-void disable_raw(void);
-void input_monitor(struct AppState *s);
-void redraw(struct AppState *s);
-int list(struct AppState *s);
-void draw_statusbar(struct AppState *s);
-int fs_empty(struct AppState *s);
-
-struct termios orig;
 
 int fs_empty(struct AppState *s) {
     return s->fs.len == 0;
@@ -178,17 +121,6 @@ int check_dir(char *filename) {
     } else {                                
         return -1; // not dir & not file
     }
-}
-
-void enable_raw(void) {
-    tcgetattr(STDIN_FILENO, &orig);
-    struct termios raw = orig;
-    raw.c_lflag &= ~(ECHO | ICANON);
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
-}
-
-void disable_raw(void) {
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig);
 }
 
 void input_monitor(struct AppState *s) {
@@ -399,7 +331,7 @@ int list(struct AppState *s) {
     closedir(wdir);
     return items_count;
 }
-
+/*
 int main() {
     struct AppState st;
     get_term_size(&st.ui.rows, &st.ui.cols);
@@ -433,3 +365,4 @@ int main() {
     free(st.fs.marked);
     return 0;
 }
+*/

@@ -17,6 +17,7 @@
 #include "../helps/helps.h"
 #include "../helps/ascii.h"
 #include "../headers/touch.h"
+#include "../headers/preview.h"
 
 #define MAXLINE 1024
 
@@ -24,7 +25,6 @@
 #define DIM    "\033[2m"
 #define ITALIC "\033[3m"
 #define ESC    "\033[0m"
-
 
 
 int main() {
@@ -52,6 +52,39 @@ int main() {
         int argc = parse_line(line, argv, 16);
         int output_code = get_command_id(argv[0]);
         switch (output_code) {
+            case CMD_preview: {
+                struct AppState st;
+                get_term_size(&st.ui.rows, &st.ui.cols);
+                st.ui.rows -= 2;
+                st.ui.footer_row = st.ui.rows + 1;
+                st.fs.marked = calloc(1024, sizeof(int));
+                if (!st.fs.marked) {
+                    perror("calloc");
+                    break;
+                }
+                st.fs.cwd = malloc(PATH_MAX);
+                setvbuf(stdout, NULL, _IONBF, 0);
+                printf("\033[?1049h");
+                printf("\033[?25l");
+                fflush(stdout);
+                char *f_list[100];
+                getcwd(st.fs.cwd, PATH_MAX);
+                st.fs.f_list = f_list;
+                int items_count = list(&st);
+                st.fs.len = items_count;
+                enable_raw();
+                input_monitor(&st);
+
+                disable_raw();
+                printf("\033[?25h");
+                printf("\033[?1049l");
+                fflush(stdout);
+                for (int i = 0; i < items_count; i++) {
+                    free(f_list[i]);
+                }
+                free(st.fs.marked);
+                break;
+            }
             case CMD_touch: {
                 int start = 1;
                 char cstamp[20] = {0};
