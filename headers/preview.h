@@ -29,7 +29,7 @@ struct UIState {
 
 struct RuntimeState {
     int launched;
-    char *last_key;
+    char last_key;
     int mode;
 };
 

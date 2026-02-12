@@ -54,7 +54,6 @@ int main() {
         switch (output_code) {
             case CMD_preview: {
                 struct AppState st;
-                st.rt.last_key = calloc(50, sizeof(char));
                 st.fs.marked_len = 0;
                 get_term_size(&st.ui.rows, &st.ui.cols);
                 st.ui.rows -= 2;
@@ -85,6 +84,7 @@ int main() {
                     free(f_list[i]);
                 }
                 free(st.fs.marked);
+                printf("\033[?25l");
                 break;
             }
             case CMD_touch: {

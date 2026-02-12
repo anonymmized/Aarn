@@ -30,7 +30,7 @@ void draw_statusbar(struct AppState *s) {
             break;
     }
     if (s->rt.mode != 2) {
-        printf("\033[%d;20HLk: %s", s->ui.footer_row, s->rt.last_key);
+        printf("\033[%d;15HLk: %c", s->ui.footer_row, s->rt.last_key);
         printf("\033[%d;1H\033[K", s->ui.rows + 2);
         printf("%s", s->fs.cwd);
     }
@@ -141,8 +141,9 @@ void input_monitor(struct AppState *s) {
         if (read(STDIN_FILENO, &c, 1) <= 0) {   
             continue;
         }
-        strcpy(s->rt.last_key, &c);
+        s->rt.last_key = c;
         if (c == '\n') {
+            s->rt.last_key = 'E';
             char path[PATH_MAX];
             if (fs_empty(s)) continue;
             snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
@@ -166,6 +167,7 @@ void input_monitor(struct AppState *s) {
             continue;
         }
         if (c == 127 || c == 8) {
+            s->rt.last_key = 'B';
             s->rt.mode = 0;
             if (strcmp(s->fs.cwd, "/") != 0) {
                 chdir("..");
@@ -184,11 +186,12 @@ void input_monitor(struct AppState *s) {
             continue;
         }
         if (c == 'q') {
+            s->rt.last_key = 'Q';
             s->rt.launched = 0;
             return;
         }
         if (c == ' ') {
-            strcpy(s->rt.last_key, "space");
+            s->rt.last_key = 'S';
             if (s->fs.marked[s->fs.index]) {
                 s->fs.marked[s->fs.index] = !s->fs.marked[s->fs.index];
                 s->fs.marked_len -= 1;
@@ -207,7 +210,7 @@ void input_monitor(struct AppState *s) {
             int visible = s->ui.rows;
 
             if (seq[1] == 'A') {
-                strcpy(s->rt.last_key, "U");
+                s->rt.last_key = 'U';
                 if (s->fs.index > 0) {
                     s->fs.index--;
                 } else {
@@ -222,7 +225,7 @@ void input_monitor(struct AppState *s) {
             }
 
             if (seq[1] == 'B') {
-                strcpy(s->rt.last_key, "D");
+                s->rt.last_key = 'D';
                 if (s->fs.index < s->fs.len - 1) {
                     s->fs.index++;
                 } else {
@@ -236,7 +239,7 @@ void input_monitor(struct AppState *s) {
             }
             if (seq[1] == 'C') {
                 s->rt.mode = 0;
-                strcpy(s->rt.last_key, "R");
+                s->rt.last_key = 'R';
                 char path[PATH_MAX];
                 if (fs_empty(s)) continue;
                 snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
@@ -260,7 +263,7 @@ void input_monitor(struct AppState *s) {
             } 
             if (seq[1] == 'D') {
                 s->rt.mode = 0;
-                strcpy(s->rt.last_key, "L");
+                s->rt.last_key = 'L';
                 if (strcmp(s->fs.cwd, "/") != 0) {
                     chdir("..");
                     getcwd(s->fs.cwd, PATH_MAX);
@@ -349,38 +352,3 @@ int list(struct AppState *s) {
     closedir(wdir);
     return items_count;
 }
-/*
-int main() {
-    struct AppState st;
-    get_term_size(&st.ui.rows, &st.ui.cols);
-    st.ui.rows -= 2;
-    st.ui.footer_row = st.ui.rows + 1;
-    st.fs.marked = calloc(1024, sizeof(int));
-    if (!st.fs.marked) {
-        perror("calloc");
-        return 1;
-    }
-    st.fs.cwd = malloc(PATH_MAX);
-    setvbuf(stdout, NULL, _IONBF, 0);
-    printf("\033[?1049h");
-    printf("\033[?25l");
-    fflush(stdout);
-    char *f_list[100];
-    getcwd(st.fs.cwd, PATH_MAX);
-    st.fs.f_list = f_list;
-    int items_count = list(&st);
-    st.fs.len = items_count;
-    enable_raw();
-    input_monitor(&st);
-
-    disable_raw();
-    printf("\033[?25h");
-    printf("\033[?1049l");
-    fflush(stdout);
-    for (int i = 0; i < items_count; i++) {
-        free(f_list[i]);
-    }
-    free(st.fs.marked);
-    return 0;
-}
-*/
