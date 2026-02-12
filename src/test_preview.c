@@ -63,8 +63,13 @@ void input_monitor(struct AppState *s);
 void redraw(struct AppState *s);
 int list(struct AppState *s);
 void draw_statusbar(struct AppState *s);
+int fs_empty(struct AppState *s);
 
 struct termios orig;
+
+int fs_empty(struct AppState *s) {
+    return s->fs.len == 0;
+}
 
 void draw_statusbar(struct AppState *s) {
     printf("\033[%d;1H\033[K", s->ui.footer_row);
@@ -200,6 +205,7 @@ void input_monitor(struct AppState *s) {
         s->rt.last_key = c;
         if (c == '\n') {
             char path[PATH_MAX];
+            if (fs_empty(s)) continue;
             snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
             if (check_dir(path) == 2) {
                 if (chdir(path) == -1) {
@@ -210,7 +216,9 @@ void input_monitor(struct AppState *s) {
                     free(s->fs.f_list[i]);
                 }
                 s->fs.len = list(s);
+                if (fs_empty(s)) continue;
                 s->fs.index = 0;
+                s->fs.offset = 0;
                 memset(s->fs.marked, 0, s->fs.len * sizeof(int));
                 redraw(s);
             } else {
@@ -227,7 +235,9 @@ void input_monitor(struct AppState *s) {
                     free(s->fs.f_list[i]);
                 }
                 s->fs.len = list(s);
+                if (fs_empty(s)) continue;
                 s->fs.index = 0;
+                s->fs.offset = 0;
                 memset(s->fs.marked, 0, s->fs.len * sizeof(int));
                 redraw(s);
             }
@@ -279,6 +289,7 @@ void input_monitor(struct AppState *s) {
             if (seq[1] == 'C') {
                 s->rt.last_key = 'R';
                 char path[PATH_MAX];
+                if (fs_empty(s)) continue;
                 snprintf(path, sizeof(path), "%s/%s", s->fs.cwd, strrchr(s->fs.f_list[s->fs.index], '/') + 1);
                 if (check_dir(path) == 2) {
                     if (chdir(path) == -1) {
@@ -290,6 +301,7 @@ void input_monitor(struct AppState *s) {
                     }
                     s->fs.len = list(s);
                     s->fs.index = 0;
+                    s->fs.offset = 0;
                     memset(s->fs.marked, 0, s->fs.len * sizeof(int));
                     redraw(s);
                 } else {
@@ -306,7 +318,9 @@ void input_monitor(struct AppState *s) {
                         free(s->fs.f_list[i]);
                     }
                     s->fs.len = list(s);
+                    if (fs_empty(s)) continue;
                     s->fs.index = 0;
+                    s->fs.offset = 0;
                     memset(s->fs.marked, 0, s->fs.len * sizeof(int));
                     redraw(s);
                 }
@@ -318,7 +332,12 @@ void input_monitor(struct AppState *s) {
 }
 
 void redraw(struct AppState *s) {
-
+    if (fs_empty(s)) {
+        clear_preview_area(s);
+        draw_statusbar(s);
+        fflush(stdout);
+        return;
+    }
     if (s->fs.index >= s->fs.len) return;
 
     s->ui.width_list = s->ui.cols / 3;
