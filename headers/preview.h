@@ -8,6 +8,13 @@
 #define CLR_CURSOR_MARKED "\033[30;48;5;214m"
 #define GAP 2
 
+typedef enum {
+    FT_DIR = 0,
+    FT_TEXT,
+    FT_BINARY,
+    FT_UNKNOWN
+} FileType;
+
 struct FSState {
     char **f_list;
     int len;
@@ -49,5 +56,6 @@ void print_name_clipped(struct AppState *s);
 void input_monitor(struct AppState *s);
 void redraw(struct AppState *s);
 void draw_statusbar(struct AppState *s);
+FileType get_file_type(const char *path);
 
 #endif

@@ -14,6 +14,39 @@ int fs_empty(struct AppState *s) {
     return s->fs.len == 0;
 }
 
+FileType get_file_type(const char *path) {
+    struct stat st;
+    if (stat(path, &st) == 0) {
+        if (S_ISDIR(st.st_mode)) return FT_DIR;
+        else if (!S_ISREG(st.st_mode)) return FT_UNKNOWN;
+        else  {
+            FILE *fp = fopen(path, "rb");
+            if (!fp) return FT_UNKNOWN;
+            unsigned char buf[512];
+            size_t n = fread(buf, 1, sizeof(buf), fp);
+            fclose(fp);
+            for (size_t i = 0; i < n; i++) {
+                if (buf[i] == 0) return FT_BINARY;
+            }
+            const char *dot = strrchr(path, '.');
+            if (!dot || dot == path) return FT_TEXT;
+            const char *ext = dot + 1;
+            if (!ext) return FT_TEXT;
+            if (!strcmp(ext, "pdf")) return FT_BINARY;
+            if (!strcmp(ext, "png")) return FT_BINARY;
+            if (!strcmp(ext, "jpg")) return FT_BINARY;
+            if (!strcmp(ext, "jpeg")) return FT_BINARY;
+            if (!strcmp(ext, "zip")) return FT_BINARY;
+            if (!strcmp(ext, "tar")) return FT_BINARY;
+            if (!strcmp(ext, "gz")) return FT_BINARY;
+            if (!strcmp(ext, "mp4")) return FT_BINARY;
+            if (!strcmp(ext, "mp3")) return FT_BINARY;
+            return FT_TEXT;
+        }
+    } 
+    return FT_UNKNOWN;
+} 
+
 void draw_statusbar(struct AppState *s) {
     printf("\033[%d;1H\033[K", s->ui.footer_row);
     printf("Mode: ");
