@@ -30,8 +30,8 @@ FileType get_file_type(const char *path) {
             }
             const char *dot = strrchr(path, '.');
             if (!dot || dot == path) return FT_TEXT;
-            const char *ext = dot + 1;
-            if (!ext) return FT_TEXT;
+            else dot++;
+            const char *ext = dot;
             if (!strcmp(ext, "pdf")) return FT_BINARY;
             if (!strcmp(ext, "png")) return FT_BINARY;
             if (!strcmp(ext, "jpg")) return FT_BINARY;
@@ -136,11 +136,6 @@ void print_name_clipped(struct AppState *s) {
     }
 }
 void draw_file_preview(struct AppState *s) {
-    if (is_binary(s)) {
-        printf("\033[%d;%dH", 1, s->ui.cols_preview);
-        printf("<BINARY FILE>");
-        return;
-    }
     FILE *fp = fopen(s->fs.f_list[s->fs.index], "r");
     if (!fp) return;
     int preview_width = s->ui.cols - s->ui.cols_preview;
@@ -194,7 +189,7 @@ void input_monitor(struct AppState *s) {
             s->rt.last_key = 'E';
             const char *path = s->fs.f_list[s->fs.index];
             if (fs_empty(s)) continue;
-            if (check_dir(path) == 2) {
+            if (get_file_type(path) == FT_DIR) {
                 if (chdir(path) == -1) {
                     continue;
                 }
@@ -287,7 +282,7 @@ void input_monitor(struct AppState *s) {
                 s->rt.last_key = 'R';
                 const char *path = s->fs.f_list[s->fs.index];
                 if (fs_empty(s)) continue;
-                if (check_dir(path) == 2) {
+                if (get_file_type(path) == FT_DIR) {
                     if (chdir(path) == -1) {
                         continue;
                     }
@@ -372,8 +367,11 @@ void redraw(struct AppState *s) {
         }
         printf("\033[%d;%dH", i + 1, s->ui.width_list);
     }
-
-    if (check_dir(s->fs.f_list[s->fs.index]) == 1) {
+    if (get_file_type(s->fs.f_list[s->fs.index]) == FT_BINARY) {
+        printf("\033[%d;%dH", 1, s->ui.cols_preview);
+        printf("<BINARY FILE>");
+    }
+    if (get_file_type(s->fs.f_list[s->fs.index]) == FT_TEXT) {
         draw_file_preview(s);
     }
     draw_statusbar(s);
