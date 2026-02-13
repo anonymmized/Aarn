@@ -329,11 +329,11 @@ void redraw(struct AppState *s) {
         }
         printf("\033[%d;%dH", i + 1, s->ui.width_list);
     }
-    if (get_file_type(s->fs.f_list[s->fs.index]) == FT_BINARY) {
+    FileType t = get_file_type(s->fs.f_list[s->fs.index]);
+    if (t == FT_BINARY) {
         printf("\033[%d;%dH", 1, s->ui.cols_preview);
         printf("<BINARY FILE>");
-    }
-    if (get_file_type(s->fs.f_list[s->fs.index]) == FT_TEXT) {
+    } else if (t == FT_TEXT) {
         draw_file_preview(s);
     }
     draw_statusbar(s);
