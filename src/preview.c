@@ -84,31 +84,6 @@ void draw_statusbar(struct AppState *s) {
     }
 }
 
-int is_binary(struct AppState *s) {
-    FILE *fp = fopen(s->fs.f_list[s->fs.index], "rb");
-    if (!fp) return 1;
-    unsigned char buf[512];
-    size_t n = fread(buf, 1, sizeof(buf), fp);
-    fclose(fp);
-    for (size_t i = 0; i < n; i++) {
-        if (buf[i] == 0) return 1;
-    }
-    const char *ext = strrchr(s->fs.f_list[s->fs.index], '.');
-    if (!ext) return 0;
-
-    if (!strcmp(ext, ".pdf")) return 1;
-    if (!strcmp(ext, ".png")) return 1;
-    if (!strcmp(ext, ".jpg")) return 1;
-    if (!strcmp(ext, ".jpeg")) return 1;
-    if (!strcmp(ext, ".zip")) return 1;
-    if (!strcmp(ext, ".tar")) return 1;
-    if (!strcmp(ext, ".gz")) return 1;
-    if (!strcmp(ext, ".mp4")) return 1;
-    if (!strcmp(ext, ".mp3")) return 1;
-
-    return 0;
-}
-
 void clear_preview_area(struct AppState *s) {
     for (int r = 1; r <= s->ui.rows; r++) {
         printf("\033[%d;%dH\033[K", r, s->ui.cols_preview);
@@ -159,19 +134,6 @@ void print_line_clipped(const char *s, int max_width) {
     }
 }
 
-int check_dir(const char *filename) {
-    struct stat buf;
-    if (stat(filename, &buf) != 0) {
-        return -1;
-    }
-    if (S_ISREG(buf.st_mode)) {
-        return 1; // file
-    } else if (S_ISDIR(buf.st_mode)) {
-        return 2; // dir
-    } else {                                
-        return -1; // not dir & not file
-    }
-}
 
 void input_monitor(struct AppState *s) {
     s->fs.index = 0;
