@@ -24,6 +24,7 @@ struct FSState {
     int *marked;
     int marked_len;
     char *cwd;
+    FileType type;
 };
 
 struct UIState {
@@ -54,6 +55,6 @@ void print_name_clipped(struct AppState *s);
 void input_monitor(struct AppState *s);
 void redraw(struct AppState *s);
 void draw_statusbar(struct AppState *s);
-FileType get_file_type(const char *path);
+FileType get_file_type(const char *path, struct AppState *s);
 
 #endif

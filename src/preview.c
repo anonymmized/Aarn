@@ -14,36 +14,80 @@ int fs_empty(struct AppState *s) {
     return s->fs.len == 0;
 }
 
-FileType get_file_type(const char *path) {
+FileType get_file_type(const char *path, struct AppState *s) {
     struct stat st;
     if (stat(path, &st) == 0) {
-        if (S_ISDIR(st.st_mode)) return FT_DIR;
-        else if (!S_ISREG(st.st_mode)) return FT_UNKNOWN;
+        if (S_ISDIR(st.st_mode)) {
+            s->fs.type = FT_DIR;
+            return FT_DIR;
+        }
+        else if (!S_ISREG(st.st_mode)) {
+            s->fs.type = FT_UNKNOWN;
+            return FT_UNKNOWN;
+        }
         else  {
             FILE *fp = fopen(path, "rb");
-            if (!fp) return FT_UNKNOWN;
+            if (!fp) { 
+                s->fs.type = FT_UNKNOWN;
+                return FT_UNKNOWN;
+            }
             unsigned char buf[512];
             size_t n = fread(buf, 1, sizeof(buf), fp);
             fclose(fp);
             for (size_t i = 0; i < n; i++) {
-                if (buf[i] == 0) return FT_BINARY;
+                if (buf[i] == 0) {
+                    s->fs.type = FT_BINARY;
+                    return FT_BINARY;
+                }
             }
             const char *dot = strrchr(path, '.');
-            if (!dot || dot == path) return FT_TEXT;
+            if (!dot || dot == path) {
+                s->fs.type = FT_TEXT;
+                return FT_TEXT;
+            }
             else dot++;
             const char *ext = dot;
-            if (!strcmp(ext, "pdf")) return FT_BINARY;
-            if (!strcmp(ext, "png")) return FT_BINARY;
-            if (!strcmp(ext, "jpg")) return FT_BINARY;
-            if (!strcmp(ext, "jpeg")) return FT_BINARY;
-            if (!strcmp(ext, "zip")) return FT_BINARY;
-            if (!strcmp(ext, "tar")) return FT_BINARY;
-            if (!strcmp(ext, "gz")) return FT_BINARY;
-            if (!strcmp(ext, "mp4")) return FT_BINARY;
-            if (!strcmp(ext, "mp3")) return FT_BINARY;
+            if (!strcmp(ext, "pdf")) {
+                s->fs.type = FT_BINARY;
+                return FT_BINARY;
+            }
+            if (!strcmp(ext, "png")) {
+                s->fs.type = FT_BINARY;
+                return FT_BINARY;
+            }
+            if (!strcmp(ext, "jpg")) {
+                s->fs.type = FT_BINARY;
+                return FT_BINARY;
+            }
+            if (!strcmp(ext, "jpeg")) {
+                s->fs.type = FT_BINARY;
+                return FT_BINARY;
+            }
+            if (!strcmp(ext, "zip")) {
+                s->fs.type = FT_BINARY;
+                return FT_BINARY;
+            }
+            if (!strcmp(ext, "tar")) {
+                s->fs.type = FT_BINARY;
+                return FT_BINARY;
+            }
+            if (!strcmp(ext, "gz")) {
+                s->fs.type = FT_BINARY;
+                return FT_BINARY;
+            }
+            if (!strcmp(ext, "mp4")) {
+                s->fs.type = FT_BINARY;
+                return FT_BINARY;
+            }
+            if (!strcmp(ext, "mp3")) {
+                s->fs.type = FT_BINARY;
+                return FT_BINARY;
+            }
+            s->fs.type = FT_TEXT;
             return FT_TEXT;
         }
     } 
+    s->fs.type = FT_UNKNOWN;
     return FT_UNKNOWN;
 } 
 
@@ -65,19 +109,20 @@ void draw_statusbar(struct AppState *s) {
     if (s->rt.mode != 2) {
         printf("\033[%d;15HLk: %c", s->ui.footer_row, s->rt.last_key);
         printf("\033[%d;25H%d|%d", s->ui.footer_row, s->fs.index + 1, s->fs.len);
-        const char *path = s->fs.f_list[s->fs.index];
-        const char *name = strrchr(path, '/');
-        name = name ? name + 1 : path;
-        char *dot = strrchr(name, '.');
-        if (!dot || dot == name) dot = "";
-        struct stat st;
-        if (stat(path, &st) == 0) {
-            if (S_ISDIR(st.st_mode)) {
-                printf("\033[%d;40H\033[37;40mDIR\033[0m", s->ui.footer_row);
-            }
-            if (S_ISREG(st.st_mode)) {
-                printf("\033[%d;40H\033[37;40m%s\033[0m", s->ui.footer_row, dot);
-            }
+        //printf("\033[%d;1H\033[K", s->ui.rows + 2);
+        switch (s->fs.type) {
+            case FT_DIR:
+                printf("\033[%d;45H<DIR>", s->ui.footer_row);
+                break;
+            case FT_TEXT:
+                printf("\033[%d;45H<TEXT>", s->ui.footer_row);
+                break;
+            case FT_BINARY:
+                printf("\033[%d;45H<BIN>", s->ui.footer_row);
+                break;
+            case FT_UNKNOWN:
+                printf("\033[%d;45H<UNKNOWN>", s->ui.footer_row);
+                break;
         }
         printf("\033[%d;1H\033[K", s->ui.rows + 2);
         printf("%s", s->fs.cwd);
@@ -151,7 +196,7 @@ void input_monitor(struct AppState *s) {
             s->rt.last_key = 'E';
             const char *path = s->fs.f_list[s->fs.index];
             if (fs_empty(s)) continue;
-            if (get_file_type(path) == FT_DIR) {
+            if (get_file_type(path, s) == FT_DIR) {
                 if (chdir(path) == -1) {
                     continue;
                 }
@@ -244,7 +289,7 @@ void input_monitor(struct AppState *s) {
                 s->rt.last_key = 'R';
                 const char *path = s->fs.f_list[s->fs.index];
                 if (fs_empty(s)) continue;
-                if (get_file_type(path) == FT_DIR) {
+                if (get_file_type(path, s) == FT_DIR) {
                     if (chdir(path) == -1) {
                         continue;
                     }
@@ -329,7 +374,7 @@ void redraw(struct AppState *s) {
         }
         printf("\033[%d;%dH", i + 1, s->ui.width_list);
     }
-    FileType t = get_file_type(s->fs.f_list[s->fs.index]);
+    FileType t = get_file_type(s->fs.f_list[s->fs.index], s);
     if (t == FT_BINARY) {
         printf("\033[%d;%dH", 1, s->ui.cols_preview);
         printf("<BINARY FILE>");
