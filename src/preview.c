@@ -114,22 +114,22 @@ void draw_statusbar(struct AppState *s) {
                 printf("\033[%d;45H\033[97;100m<DIR>\033[0m", s->ui.footer_row);
                 break;
             case FT_TEXT:
-                printf("\033[%d;45H\033[97;100m<TEXT>\033[0m", s->ui.footer_row);
+                printf("\033[%d;45H\033[97;100m<TXT>\033[0m", s->ui.footer_row);
                 break;
             case FT_BINARY:
                 printf("\033[%d;45H\033[97;100m<BIN>\033[0m", s->ui.footer_row);
                 break;
             case FT_UNKNOWN:
-                printf("\033[%d;45H\033[97;100m<UNKNOWN>\033[0m", s->ui.footer_row);
+                printf("\033[%d;45H\033[97;100m<UNK>\033[0m", s->ui.footer_row);
                 break;
         }
         printf("\033[%d;55H", s->ui.footer_row);
         switch(s->ui.preview_st) {
             case 0:
-                printf("Preview: empty");
+                printf("Prv: empt");
                 break;
             case 1:
-                printf("Preview: active");
+                printf("Prv: actv");
                 break;
         }
         printf("\033[%d;1H\033[K", s->ui.rows + 2);
