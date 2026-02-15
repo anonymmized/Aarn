@@ -109,19 +109,18 @@ void draw_statusbar(struct AppState *s) {
     if (s->rt.mode != 2) {
         printf("\033[%d;15HLk: %c", s->ui.footer_row, s->rt.last_key);
         printf("\033[%d;25H%d|%d", s->ui.footer_row, s->fs.index + 1, s->fs.len);
-        //printf("\033[%d;1H\033[K", s->ui.rows + 2);
         switch (s->fs.type) {
             case FT_DIR:
-                printf("\033[%d;45H<DIR>", s->ui.footer_row);
+                printf("\033[%d;45H\033[97;100m<DIR>\033[0m", s->ui.footer_row);
                 break;
             case FT_TEXT:
-                printf("\033[%d;45H<TEXT>", s->ui.footer_row);
+                printf("\033[%d;45H\033[97;100m<TEXT>\033[0m", s->ui.footer_row);
                 break;
             case FT_BINARY:
-                printf("\033[%d;45H<BIN>", s->ui.footer_row);
+                printf("\033[%d;45H\033[97;100m<BIN>\033[0m", s->ui.footer_row);
                 break;
             case FT_UNKNOWN:
-                printf("\033[%d;45H<UNKNOWN>", s->ui.footer_row);
+                printf("\033[%d;45H\033[97;100m<UNKNOWN>\033[0m", s->ui.footer_row);
                 break;
         }
         printf("\033[%d;1H\033[K", s->ui.rows + 2);
