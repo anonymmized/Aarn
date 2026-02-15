@@ -33,6 +33,7 @@ struct UIState {
     int footer_row;
     int width_list;
     int cols_preview;
+    int preview_st;
 };
 
 struct RuntimeState {

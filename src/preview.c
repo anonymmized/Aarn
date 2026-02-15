@@ -123,6 +123,15 @@ void draw_statusbar(struct AppState *s) {
                 printf("\033[%d;45H\033[97;100m<UNKNOWN>\033[0m", s->ui.footer_row);
                 break;
         }
+        printf("\033[%d;55H", s->ui.footer_row);
+        switch(s->ui.preview_st) {
+            case 0:
+                printf("Preview: empty");
+                break;
+            case 1:
+                printf("Preview: active");
+                break;
+        }
         printf("\033[%d;1H\033[K", s->ui.rows + 2);
         printf("%s", s->fs.cwd);
     }
@@ -373,12 +382,14 @@ void redraw(struct AppState *s) {
         }
         printf("\033[%d;%dH", i + 1, s->ui.width_list);
     }
+    s->ui.preview_st = 0;
     FileType t = get_file_type(s->fs.f_list[s->fs.index], s);
     if (t == FT_BINARY) {
         printf("\033[%d;%dH", 1, s->ui.cols_preview);
         printf("<BINARY FILE>");
     } else if (t == FT_TEXT) {
         draw_file_preview(s);
+        s->ui.preview_st = 1;
     }
     draw_statusbar(s);
     fflush(stdout);
