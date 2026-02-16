@@ -203,12 +203,12 @@ void input_monitor(struct AppState *s) {
                     free(s->fs.f_list[i]);
                 }
                 s->fs.len = list(s);
-                update_current_file_type(s);
                 if (fs_empty(s)) continue;
                 s->fs.index = 0;
                 s->fs.offset = 0;
                 memset(s->fs.marked, 0, 1024 * sizeof(int));
                 s->fs.marked_len = 0;
+                update_current_file_type(s);
                 redraw(s);
             } else {
                 redraw(s);
@@ -226,12 +226,12 @@ void input_monitor(struct AppState *s) {
                     free(s->fs.f_list[i]);
                 }
                 s->fs.len = list(s);
-                update_current_file_type(s);
                 if (fs_empty(s)) continue;
                 s->fs.index = 0;
                 s->fs.offset = 0;
                 memset(s->fs.marked, 0, 1024 * sizeof(int));
                 s->fs.marked_len = 0;
+                update_current_file_type(s);
                 redraw(s);
             }
             continue;
@@ -300,11 +300,11 @@ void input_monitor(struct AppState *s) {
                         free(s->fs.f_list[i]);
                     }
                     s->fs.len = list(s);
-                    update_current_file_type(s);
                     s->fs.index = 0;
                     s->fs.offset = 0;
                     memset(s->fs.marked, 0, 1024 * sizeof(int));
                     s->fs.marked_len = 0;
+                    update_current_file_type(s);
                     redraw(s);
                 } else {
                     redraw(s);
@@ -321,12 +321,12 @@ void input_monitor(struct AppState *s) {
                         free(s->fs.f_list[i]);
                     }
                     s->fs.len = list(s);
-                    update_current_file_type(s);
                     if (fs_empty(s)) continue;
                     s->fs.index = 0;
                     s->fs.offset = 0;
                     memset(s->fs.marked, 0, 1024 * sizeof(int));
                     s->fs.marked_len = 0;
+                    update_current_file_type(s);
                     redraw(s);
                 }
                 continue;
