@@ -68,9 +68,13 @@ int main() {
                 printf("\033[?1049h");
                 printf("\033[?25l");
                 fflush(stdout);
-                char *f_list[100];
                 getcwd(st.fs.cwd, PATH_MAX);
-                st.fs.f_list = f_list;
+                st.fs.f_list = malloc(sizeof(char*) * 1024);
+                if (!st.fs.f_list) {
+                    perror("malloc");
+                    free(st.fs.marked);
+                    break;
+                }
                 int items_count = list(&st);
                 st.fs.len = items_count;
                 enable_raw();
@@ -80,9 +84,11 @@ int main() {
                 printf("\033[?25h");
                 printf("\033[?1049l");
                 fflush(stdout);
-                for (int i = 0; i < items_count; i++) {
-                    free(f_list[i]);
+                for (int i = 0; i < st.fs.len; i++) {
+                    free(st.fs.f_list[i]);
                 }
+                free(st.fs.f_list);
+                free(st.fs.cwd);
                 free(st.fs.marked);
                 printf("\033[?25l");
                 break;
