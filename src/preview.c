@@ -14,6 +14,11 @@ int fs_empty(struct AppState *s) {
     return s->fs.len == 0;
 }
 
+void update_current_file_type(struct AppState *s) {
+    FileType t = get_file_type(s->fs.f_list[s->fs.index]);
+    s->fs.type = t;
+}
+
 FileType get_file_type(const char *path) {
     struct stat st;
     if (stat(path, &st) == 0) {
@@ -75,7 +80,7 @@ FileType get_file_type(const char *path) {
     return FT_UNKNOWN;
 } 
 
-void draw_statusbar(struct AppState *s, FileType ftype) {
+void draw_statusbar(struct AppState *s) {
     printf("\033[%d;1H\033[K", s->ui.footer_row);
     printf("Mode: ");
     switch (s->rt.mode) {
@@ -93,7 +98,7 @@ void draw_statusbar(struct AppState *s, FileType ftype) {
     if (s->rt.mode != 2) {
         printf("\033[%d;15HLk: %c", s->ui.footer_row, s->rt.last_key);
         printf("\033[%d;25H%d|%d", s->ui.footer_row, s->fs.index + 1, s->fs.len);
-        switch (ftype) {
+        switch (s->fs.type) {
             case FT_DIR:
                 printf("\033[%d;45H\033[97;100m<DIR>\033[0m", s->ui.footer_row);
                 break;
@@ -188,7 +193,7 @@ void input_monitor(struct AppState *s) {
             s->rt.last_key = 'E';
             const char *path = s->fs.f_list[s->fs.index];
             if (fs_empty(s)) continue;
-            if (get_file_type(path) == FT_DIR) {
+            if (s->fs.type == FT_DIR) {
                 if (chdir(path) == -1) {
                     continue;
                 }
@@ -197,6 +202,7 @@ void input_monitor(struct AppState *s) {
                     free(s->fs.f_list[i]);
                 }
                 s->fs.len = list(s);
+                update_current_file_type(s);
                 if (fs_empty(s)) continue;
                 s->fs.index = 0;
                 s->fs.offset = 0;
@@ -219,6 +225,7 @@ void input_monitor(struct AppState *s) {
                     free(s->fs.f_list[i]);
                 }
                 s->fs.len = list(s);
+                update_current_file_type(s);
                 if (fs_empty(s)) continue;
                 s->fs.index = 0;
                 s->fs.offset = 0;
@@ -260,6 +267,7 @@ void input_monitor(struct AppState *s) {
                 if (s->fs.index < s->fs.offset) {
                     s->fs.offset = s->fs.index;
                 }
+                update_current_file_type(s);
                 redraw(s);
             }
 
@@ -274,6 +282,7 @@ void input_monitor(struct AppState *s) {
 
                 if (s->fs.index >= s->fs.offset + visible)
                     s->fs.offset = s->fs.index - visible + 1;
+                update_current_file_type(s);
                 redraw(s);
             }
             if (seq[1] == 'C') {
@@ -281,7 +290,7 @@ void input_monitor(struct AppState *s) {
                 s->rt.last_key = 'R';
                 const char *path = s->fs.f_list[s->fs.index];
                 if (fs_empty(s)) continue;
-                if (get_file_type(path) == FT_DIR) {
+                if (s->fs.type == FT_DIR) {
                     if (chdir(path) == -1) {
                         continue;
                     }
@@ -290,6 +299,7 @@ void input_monitor(struct AppState *s) {
                         free(s->fs.f_list[i]);
                     }
                     s->fs.len = list(s);
+                    update_current_file_type(s);
                     s->fs.index = 0;
                     s->fs.offset = 0;
                     memset(s->fs.marked, 0, 1024 * sizeof(int));
@@ -310,6 +320,7 @@ void input_monitor(struct AppState *s) {
                         free(s->fs.f_list[i]);
                     }
                     s->fs.len = list(s);
+                    update_current_file_type(s);
                     if (fs_empty(s)) continue;
                     s->fs.index = 0;
                     s->fs.offset = 0;
@@ -327,7 +338,7 @@ void input_monitor(struct AppState *s) {
 void redraw(struct AppState *s) {
     if (fs_empty(s)) {
         clear_preview_area(s);
-        draw_statusbar(s, FT_UNKNOWN);
+        draw_statusbar(s);
         fflush(stdout);
         return;
     }
@@ -367,15 +378,14 @@ void redraw(struct AppState *s) {
         printf("\033[%d;%dH", i + 1, s->ui.width_list);
     }
     s->ui.preview_st = 0;
-    FileType t = get_file_type(s->fs.f_list[s->fs.index]);
-    if (t == FT_BINARY) {
+    if (s->fs.type == FT_BINARY) {
         printf("\033[%d;%dH", 1, s->ui.cols_preview);
         printf("<BINARY FILE>");
-    } else if (t == FT_TEXT) {
+    } else if (s->fs.type == FT_TEXT) {
         draw_file_preview(s);
         s->ui.preview_st = 1;
     }
-    draw_statusbar(s, t);
+    draw_statusbar(s);
     fflush(stdout);
 }
 
