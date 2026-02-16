@@ -182,6 +182,7 @@ void input_monitor(struct AppState *s) {
     s->fs.offset = 0; 
     s->rt.launched = 1;
     s->rt.mode = 0;
+    if (!fs_empty(s)) update_current_file_type(s);
     redraw(s);
     while (1) {
         char c;
