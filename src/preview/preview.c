@@ -81,7 +81,8 @@ void input_monitor(struct AppState *s) {
             s->fs.marked[s->fs.index] ^= 1;
             if (s->fs.marked[s->fs.index]) s->fs.marked_len++;
             else s->fs.marked_len--;
-            s->rt.mode = 2;
+            if (s->fs.marked_len == 0) s->rt.mode = 0;
+            else s->rt.mode = 2;
             redraw(s);
             continue;
         }
