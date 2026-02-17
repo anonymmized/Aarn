@@ -1,5 +1,7 @@
-#include "../headers/preview.h"
-#include "../headers/utils.h"
+#include "../../headers/preview.h"
+#include "../../headers/UI.h"
+#include "../../headers/FS.h"
+#include "../../headers/utils.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -9,7 +11,7 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-
+/*
 int fs_empty(struct AppState *s) {
     return s->fs.len == 0;
 }
@@ -176,7 +178,7 @@ void print_line_clipped(const char *s, int max_width) {
     }
 }
 
-
+*/
 void input_monitor(struct AppState *s) {
     s->fs.index = 0;
     s->fs.offset = 0; 
@@ -389,7 +391,7 @@ void redraw(struct AppState *s) {
     draw_statusbar(s);
     fflush(stdout);
 }
-
+/*
 int list(struct AppState *s) {
     DIR *wdir = opendir(s->fs.cwd);
     if (!wdir) {
@@ -420,3 +422,4 @@ int list(struct AppState *s) {
     closedir(wdir);
     return s->fs.len;
 }
+*/
