@@ -69,14 +69,15 @@ int main() {
                 printf("\033[?25l");
                 fflush(stdout);
                 getcwd(st.fs.cwd, PATH_MAX);
-                st.fs.f_list = malloc(sizeof(char*) * 1024);
+                st.fs.capacity = 32;
+                st.fs.len = 0;
+                st.fs.f_list = malloc(sizeof(char*) * st.fs.capacity);
                 if (!st.fs.f_list) {
                     perror("malloc");
                     free(st.fs.marked);
                     break;
                 }
-                int items_count = list(&st);
-                st.fs.len = items_count;
+                st.fs.len = list(&st);
                 enable_raw();
                 input_monitor(&st);
 

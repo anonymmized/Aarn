@@ -18,6 +18,7 @@ typedef enum {
 struct FSState {
     char **f_list;
     int len;
+    int capacity;
     int index;
     int offset;
     int real;

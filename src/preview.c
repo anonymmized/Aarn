@@ -396,15 +396,27 @@ int list(struct AppState *s) {
         fprintf(stderr, "Error wit opening dir\n");
         return 0;
     }
-    int items_count = 0;
+    s->fs.len = 0;
     struct dirent *ent;
     while ((ent = readdir(wdir)) != NULL) {
         if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
+        
+        if (s->fs.len >= s->fs.capacity) {
+            s->fs.capacity *= 2;
+            char **tmp = realloc(s->fs.f_list, sizeof(char *) * s->fs.capacity);
+            if (!tmp) {
+                perror("malloc");
+                closedir(wdir);
+                return s->fs.len;
+            }
+            s->fs.f_list = tmp;
+        }
         char fullpath[1024];
         snprintf(fullpath, sizeof(fullpath), "%s/%s", s->fs.cwd, ent->d_name);
-        s->fs.f_list[items_count] = malloc(strlen(fullpath) + 1);
-        strcpy(s->fs.f_list[items_count++], fullpath);
+        s->fs.f_list[s->fs.len] = malloc(strlen(fullpath) + 1);
+        strcpy(s->fs.f_list[s->fs.len++], fullpath);
+
     }
     closedir(wdir);
-    return items_count;
+    return s->fs.len;
 }
