@@ -23,6 +23,32 @@ int list(const char *path, char **f_list) {
     return items_count;
 }
 
+void swap(int *a, int *b) {
+    int tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
+
+void quick_sort(int *arr, int left, int right) {
+    int i = left, j = right;
+    int pivot = arr[(left + right) / 2];
+    while (i <= j) {
+        while (arr[i] < pivot) i++;
+        while (arr[j] > pivot) j--;
+        if (i <= j) {
+            swap(&arr[i], &arr[j]);
+            i++;
+            j--;
+        }
+    }
+    if (left < j) {
+        swap(arr, left, j);
+    }
+    if (i < right) {
+        swap(arr, i, right);
+    }
+}
+
 int comparator(char *path1, char *path2) {
     struct stat st1;
     struct stat st2;
@@ -53,17 +79,6 @@ int comparator(char *path1, char *path2) {
                 }
             }
         }
-    }
-    return 0;
-}
-
-int main() {
-    const char *path = ".";
-    char **f_list = malloc(sizeof(char *) * 1024);
-    int len = list(path, f_list);
-    for (int i = 0; i < len - 1; i++) {
-        printf("%d - %d - %d\t%s\n", i + 1, comparator(f_list[i], f_list[i+1]), i+2, f_list[i]);
-        free(f_list[i]);
     }
     return 0;
 }
