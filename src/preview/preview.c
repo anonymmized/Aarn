@@ -12,6 +12,59 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
+void swap(void *a, void *b, size_t size) {
+    char tmp[size];
+    memcpy(tmp, a, size);
+    memcpy(a, b, size);
+    memcpy(b, tmp, size);
+}
+
+int file_cmp(const void *a, const void *b) {
+    const char *path1 = *(const char**)a;
+    const char *path2 = *(const char**)b;
+
+    struct stat st1, st2;
+
+    if (stat(path1, &st1) != 0 || stat(path2, &st2) != 0) return 0;
+    int dir1 = S_ISDIR(st1.st_mode);
+    int dir2 = S_ISDIR(st2.st_mode);
+
+    if (dir1 && !dir2) return -1;
+    if (dir2 && !dir1) return 1;
+
+    const char *name1 = strrchr(path1, '/');
+    const char *name2 = strrchr(path2, '/');
+
+    name1 = name1 ? name1 + 1 : path1;
+    name2 = name2 ? name2 + 1 : path2;
+
+    return strcmp(name1, name2);
+}
+
+void quick_sort(void *base, int left, int right, size_t size, int (*cmp)(const void *, const void *)) {
+    char *arr = (char *)base;
+    int i = left;
+    int j = right;
+    char pivot[size];
+    memcpy(pivot, arr + ((right + left) / 2) * size, size);
+    while (i <= j) {
+        while (cmp(arr + i * size, pivot) < 0) i++;
+        while (cmp(arr + j * size, pivot) > 0) j--;
+
+        if (i <= j) {
+            swap(arr + i * size, arr + j * size, size);
+            i++;
+            j--;
+        }
+    }
+    if (left < j) {
+        quick_sort(base, left, j, size, cmp);
+    }
+    if (right > i) {
+        quick_sort(base, i, right, size, cmp);
+    }
+}
+
 void input_monitor(struct AppState *s) {
     s->fs.index = 0;
     s->fs.offset = 0; 
