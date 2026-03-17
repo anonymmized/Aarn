@@ -78,6 +78,7 @@ int main() {
                     break;
                 }
                 st.fs.len = list(&st);
+                quick_sort(st.fs.f_list, 0, st.fs.len - 1, sizeof(char *), file_cmp);
                 enable_raw();
                 input_monitor(&st);
 

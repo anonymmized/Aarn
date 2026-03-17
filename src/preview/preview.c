@@ -9,7 +9,6 @@
 #include <unistd.h>
 #include <termios.h>
 #include <limits.h>
-#include <stddef.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
@@ -46,11 +45,10 @@ void quick_sort(void *base, int left, int right, size_t size, int (*cmp)(const v
     char *arr = (char *)base;
     int i = left;
     int j = right;
-    char pivot[size];
-    memcpy(pivot, arr + ((right + left) / 2) * size, size);
+    char *pivot = *(char **)(arr + ((left + right) / 2) * size);
     while (i <= j) {
-        while (cmp(arr + i * size, pivot) < 0) i++;
-        while (cmp(arr + j * size, pivot) > 0) j--;
+        while (cmp(arr + i * size, &pivot) < 0) i++;
+        while (cmp(arr + j * size, &pivot) > 0) j--;
 
         if (i <= j) {
             swap(arr + i * size, arr + j * size, size);
