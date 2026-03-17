@@ -1,6 +1,8 @@
 #ifndef PREVIEW_H
 #define PREVIEW_H
 
+#include <stddef.h>
+
 #define CLR_RESET "\033[0m"
 #define CLR_NORMAL ""
 #define CLR_CURSOR "\033[38;5;214m"

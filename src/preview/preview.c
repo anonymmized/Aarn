@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <limits.h>
+#include <stddef.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
@@ -78,6 +79,10 @@ void input_monitor(struct AppState *s) {
             continue;
         }
         s->rt.last_key = c;
+        if (c == 's') {
+            quick_sort(s->fs.f_list, 0, s->fs.len - 1, sizeof(char *), file_cmp);
+            redraw(s);
+        }
         if (c == '\n') {
             s->rt.last_key = 'E';
             const char *path = s->fs.f_list[s->fs.index];
