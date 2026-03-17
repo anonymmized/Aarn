@@ -20,7 +20,7 @@ int list(struct AppState *s) {
 
         if (s->fs.len >= s->fs.capacity) {
             s->fs.capacity *= 2;
-            char **tmp = realloc(s->fs.f_list, sizeof(char *) * s->fs.capacity);
+            FileEntry *tmp = realloc(s->fs.f_list, sizeof(FileEntry) * s->fs.capacity);
             if (!tmp) {
                 perror("malloc");
                 closedir(wdir);
@@ -30,9 +30,12 @@ int list(struct AppState *s) {
         }
         char fullpath[1024];
         snprintf(fullpath, sizeof(fullpath), "%s/%s", s->fs.cwd, ent->d_name);
-        s->fs.f_list[s->fs.len] = malloc(strlen(fullpath) + 1);
-        strcpy(s->fs.f_list[s->fs.len++], fullpath);
 
+        s->fs.f_list[s->fs.len].path = malloc(strlen(fullpath) + 1);
+        strcpy(s->fs.f_list[s->fs.len].path, fullpath);
+
+        s->fs.f_list[s->fs.len].type = get_file_type(fullpath);
+        s->fs.len++;
     }
     closedir(wdir);
     return s->fs.len;
@@ -40,11 +43,6 @@ int list(struct AppState *s) {
 
 int fs_empty(struct AppState *s) {
     return s->fs.len == 0;
-}
-
-void update_current_file_type(struct AppState *s) {
-    FileType t = get_file_type(s->fs.f_list[s->fs.index]);
-    s->fs.type = t;
 }
 
 FileType get_file_type(const char *path) {

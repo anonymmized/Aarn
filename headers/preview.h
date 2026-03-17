@@ -17,8 +17,13 @@ typedef enum {
     FT_UNKNOWN
 } FileType;
 
+typedef struct {
+    char *path;
+    FileType type;
+} FileEntry;
+
 struct FSState {
-    char **f_list;
+    FileEntry *f_list;
     int len;
     int capacity;
     int index;

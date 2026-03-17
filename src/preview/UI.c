@@ -24,7 +24,8 @@ void draw_statusbar(struct AppState *s) {
     if (s->rt.mode != 2) {
         printf("\033[%d;15HLk: %c", s->ui.footer_row, s->rt.last_key);
         printf("\033[%d;25H%d|%d", s->ui.footer_row, s->fs.index + 1, s->fs.len);
-        switch (s->fs.type) {
+        FileType cur_type = s->fs.f_list[s->fs.index].type;
+        switch (cur_type) {
             case FT_DIR:
                 printf("\033[%d;45H\033[97;100m<DIR>\033[0m", s->ui.footer_row);
                 break;
@@ -67,8 +68,8 @@ void get_term_size(int *rows, int *cols) {
 
 void print_name_clipped(struct AppState *s) {
     int i = 0;
-    char *name = strrchr(s->fs.f_list[s->fs.real], '/');
-    name = name ? name + 1 : s->fs.f_list[s->fs.real];
+    char *name = strrchr(s->fs.f_list[s->fs.real].path, '/');
+    name = name ? name + 1 : s->fs.f_list[s->fs.real].path;
     while (i < s->ui.width_list - 2 && name[i] && name[i] != '\n') {
         putchar(name[i]);
         i++;
@@ -79,7 +80,7 @@ void print_name_clipped(struct AppState *s) {
 }
 
 void draw_file_preview(struct AppState *s) {
-    FILE *fp = fopen(s->fs.f_list[s->fs.index], "r");
+    FILE *fp = fopen(s->fs.f_list[s->fs.index].path, "r");
     if (!fp) return;
     int preview_width = s->ui.cols - s->ui.cols_preview;
     char line[4096];

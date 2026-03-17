@@ -71,14 +71,14 @@ int main() {
                 getcwd(st.fs.cwd, PATH_MAX);
                 st.fs.capacity = 32;
                 st.fs.len = 0;
-                st.fs.f_list = malloc(sizeof(char*) * st.fs.capacity);
+                st.fs.f_list = malloc(sizeof(FileEntry) * st.fs.capacity);
                 if (!st.fs.f_list) {
                     perror("malloc");
                     free(st.fs.marked);
                     break;
                 }
                 st.fs.len = list(&st);
-                quick_sort(st.fs.f_list, 0, st.fs.len - 1, sizeof(char *), file_cmp);
+                quick_sort(st.fs.f_list, 0, st.fs.len - 1, sizeof(FileEntry), file_cmp);
                 enable_raw();
                 input_monitor(&st);
 
@@ -87,7 +87,7 @@ int main() {
                 printf("\033[?1049l");
                 fflush(stdout);
                 for (int i = 0; i < st.fs.len; i++) {
-                    free(st.fs.f_list[i]);
+                    free(st.fs.f_list[i].path);
                 }
                 free(st.fs.f_list);
                 free(st.fs.cwd);

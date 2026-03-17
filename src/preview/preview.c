@@ -20,23 +20,17 @@ void swap(void *a, void *b, size_t size) {
 }
 
 int file_cmp(const void *a, const void *b) {
-    const char *path1 = *(const char**)a;
-    const char *path2 = *(const char**)b;
+    const FileEntry *path1 = a;
+    const FileEntry *path2 = b;
 
-    struct stat st1, st2;
+    if (path1->type == FT_DIR && path2->type != FT_DIR) return -1;
+    if (path1->type != FT_DIR && path2->type == FT_DIR) return 1;
 
-    if (stat(path1, &st1) != 0 || stat(path2, &st2) != 0) return 0;
-    int dir1 = S_ISDIR(st1.st_mode);
-    int dir2 = S_ISDIR(st2.st_mode);
+    const char *name1 = strrchr(path1->path, '/');
+    const char *name2 = strrchr(path2->path, '/');
 
-    if (dir1 && !dir2) return -1;
-    if (dir2 && !dir1) return 1;
-
-    const char *name1 = strrchr(path1, '/');
-    const char *name2 = strrchr(path2, '/');
-
-    name1 = name1 ? name1 + 1 : path1;
-    name2 = name2 ? name2 + 1 : path2;
+    name1 = name1 ? name1 + 1 : path1->path;
+    name2 = name2 ? name2 + 1 : path2->path;
 
     return strcmp(name1, name2);
 }
@@ -45,10 +39,11 @@ void quick_sort(void *base, int left, int right, size_t size, int (*cmp)(const v
     char *arr = (char *)base;
     int i = left;
     int j = right;
-    char *pivot = *(char **)(arr + ((left + right) / 2) * size);
+    char pivot[size];
+    memcpy(pivot, arr + ((left + right) / 2) * size, size);
     while (i <= j) {
-        while (cmp(arr + i * size, &pivot) < 0) i++;
-        while (cmp(arr + j * size, &pivot) > 0) j--;
+        while (cmp(arr + i * size, pivot) < 0) i++;
+        while (cmp(arr + j * size, pivot) > 0) j--;
 
         if (i <= j) {
             swap(arr + i * size, arr + j * size, size);
@@ -69,7 +64,6 @@ void input_monitor(struct AppState *s) {
     s->fs.offset = 0; 
     s->rt.launched = 1;
     s->rt.mode = 0;
-    if (!fs_empty(s)) update_current_file_type(s);
     redraw(s);
     while (1) {
         char c;
@@ -83,15 +77,15 @@ void input_monitor(struct AppState *s) {
         }
         if (c == '\n') {
             s->rt.last_key = 'E';
-            const char *path = s->fs.f_list[s->fs.index];
+            const char *path = s->fs.f_list[s->fs.index].path;
             if (fs_empty(s)) continue;
-            if (s->fs.type == FT_DIR) {
+            if (s->fs.f_list[s->fs.index].type == FT_DIR) {
                 if (chdir(path) == -1) {
                     continue;
                 }
                 getcwd(s->fs.cwd, PATH_MAX);
                 for (int i = 0; i < s->fs.len; i++) {
-                    free(s->fs.f_list[i]);
+                    free(s->fs.f_list[i].path);
                 }
                 s->fs.len = list(s);
                 if (fs_empty(s)) continue;
@@ -99,7 +93,6 @@ void input_monitor(struct AppState *s) {
                 s->fs.offset = 0;
                 memset(s->fs.marked, 0, 1024 * sizeof(int));
                 s->fs.marked_len = 0;
-                update_current_file_type(s);
                 redraw(s);
             } else {
                 redraw(s);
@@ -114,7 +107,7 @@ void input_monitor(struct AppState *s) {
                 getcwd(s->fs.cwd, PATH_MAX);
 
                 for (int i = 0; i < s->fs.len; i++) {
-                    free(s->fs.f_list[i]);
+                    free(s->fs.f_list[i].path);
                 }
                 s->fs.len = list(s);
                 if (fs_empty(s)) continue;
@@ -122,7 +115,6 @@ void input_monitor(struct AppState *s) {
                 s->fs.offset = 0;
                 memset(s->fs.marked, 0, 1024 * sizeof(int));
                 s->fs.marked_len = 0;
-                update_current_file_type(s);
                 redraw(s);
             }
             continue;
@@ -160,7 +152,6 @@ void input_monitor(struct AppState *s) {
                 if (s->fs.index < s->fs.offset) {
                     s->fs.offset = s->fs.index;
                 }
-                update_current_file_type(s);
                 redraw(s);
             }
 
@@ -175,13 +166,12 @@ void input_monitor(struct AppState *s) {
 
                 if (s->fs.index >= s->fs.offset + visible)
                     s->fs.offset = s->fs.index - visible + 1;
-                update_current_file_type(s);
                 redraw(s);
             }
             if (seq[1] == 'C') {
                 s->rt.mode = 0;
                 s->rt.last_key = 'R';
-                const char *path = s->fs.f_list[s->fs.index];
+                const char *path = s->fs.f_list[s->fs.index].path;
                 if (fs_empty(s)) continue;
                 if (s->fs.type == FT_DIR) {
                     if (chdir(path) == -1) {
@@ -189,14 +179,13 @@ void input_monitor(struct AppState *s) {
                     }
                     getcwd(s->fs.cwd, PATH_MAX);
                     for (int i = 0; i < s->fs.len; i++) {
-                        free(s->fs.f_list[i]);
+                        free(s->fs.f_list[i].path);
                     }
                     s->fs.len = list(s);
                     s->fs.index = 0;
                     s->fs.offset = 0;
                     memset(s->fs.marked, 0, 1024 * sizeof(int));
                     s->fs.marked_len = 0;
-                    update_current_file_type(s);
                     redraw(s);
                 } else {
                     redraw(s);
@@ -210,7 +199,7 @@ void input_monitor(struct AppState *s) {
                     chdir("..");
                     getcwd(s->fs.cwd, PATH_MAX);
                     for (int i = 0; i < s->fs.len; i++) {
-                        free(s->fs.f_list[i]);
+                        free(s->fs.f_list[i].path);
                     }
                     s->fs.len = list(s);
                     if (fs_empty(s)) continue;
@@ -218,7 +207,6 @@ void input_monitor(struct AppState *s) {
                     s->fs.offset = 0;
                     memset(s->fs.marked, 0, 1024 * sizeof(int));
                     s->fs.marked_len = 0;
-                    update_current_file_type(s);
                     redraw(s);
                 }
                 continue;
@@ -271,10 +259,11 @@ void redraw(struct AppState *s) {
         printf("\033[%d;%dH", i + 1, s->ui.width_list);
     }
     s->ui.preview_st = 0;
-    if (s->fs.type == FT_BINARY) {
+    FileType cur_type = s->fs.f_list[s->fs.index].type;
+    if (cur_type == FT_BINARY) {
         printf("\033[%d;%dH", 1, s->ui.cols_preview);
         printf("<BINARY FILE>");
-    } else if (s->fs.type == FT_TEXT) {
+    } else if (cur_type == FT_TEXT) {
         draw_file_preview(s);
         s->ui.preview_st = 1;
     }
