@@ -42,14 +42,22 @@ int file_cmp_ptr(const void *a, const void *b) {
         case SORT_DATE_DESC:
         case SORT_DATE_ASC: {
             struct stat st1, st2;
-            stat(path1->path, &st1);
-            stat(path2->path, &st2);
-            if (g_sort_mode == SORT_DATE_DESC) return st2.st_mtime - st1.st_mtime;
-            else return st1.st_mtime - st2.st_mtime;
+            if (stat(path1->path, &st1) != 0) return 0;
+            if (stat(path2->path, &st2) != 0) return 0;
+            if (g_sort_mode == SORT_DATE_DESC) return (st2.st_mtime > st1.st_mtime) - (st2.st_mtime < st1.st_mtime);
+            else return (st1.st_mtime > st2.st_mtime) - (st1.st_mtime < st2.st_mtime);
         }
         default:
             return strcmp(name1, name2);
     }
+}
+
+void rebuild_view(struct AppState *s) {
+    free(s->fs.view);
+    s->fs.view_len = s->fs.len;
+    s->fs.view = malloc(sizeof(FileEntry*) * s->fs.len);
+    for (int i = 0; i < s->fs.len; i++) s->fs.view[i] = &s->fs.f_list[i];
+    quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
 }
 
 void quick_sort(void *base, int left, int right, size_t size, int (*cmp)(const void *, const void *)) {
@@ -118,7 +126,7 @@ void input_monitor(struct AppState *s) {
             s->rt.last_key = 'E';
             const char *path = s->fs.view[s->fs.index]->path;
             if (fs_empty(s)) continue;
-            if (s->fs.f_list[s->fs.index].type == FT_DIR) {
+            if (s->fs.view[s->fs.index]->type == FT_DIR) {
                 if (chdir(path) == -1) {
                     continue;
                 }
@@ -127,11 +135,7 @@ void input_monitor(struct AppState *s) {
                     free(s->fs.f_list[i].path);
                 }
                 s->fs.len = list(s);
-                free(s->fs.view);
-                s->fs.view_len = s->fs.len;
-                s->fs.view = malloc(sizeof(FileEntry*) * s->fs.len);
-                for (int i = 0; i < s->fs.len; i++) s->fs.view[i] = &s->fs.f_list[i];
-                quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
+                rebuild_view(s);
                 if (fs_empty(s)) continue;
                 s->fs.index = 0;
                 s->fs.offset = 0;
@@ -154,11 +158,7 @@ void input_monitor(struct AppState *s) {
                     free(s->fs.f_list[i].path);
                 }
                 s->fs.len = list(s);
-                free(s->fs.view);
-                s->fs.view_len = s->fs.len;
-                s->fs.view = malloc(sizeof(FileEntry*) * s->fs.len);
-                for (int i = 0; i < s->fs.len; i++) s->fs.view[i] = &s->fs.f_list[i];
-                quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
+                rebuild_view(s);
                 if (fs_empty(s)) continue;
                 s->fs.index = 0;
                 s->fs.offset = 0;
@@ -222,20 +222,16 @@ void input_monitor(struct AppState *s) {
                 s->rt.last_key = 'R';
                 const char *path = s->fs.view[s->fs.index]->path;
                 if (fs_empty(s)) continue;
-                if (s->fs.f_list[s->fs.index].type == FT_DIR) {
+                if (s->fs.view[s->fs.index]->type == FT_DIR) {
                     if (chdir(path) == -1) {
                         continue;
                     }
                     getcwd(s->fs.cwd, PATH_MAX);
-                    for (int i = 0; i < s->fs.view_len; i++) {
+                    for (int i = 0; i < s->fs.len; i++) {
                         free(s->fs.f_list[i].path);
                     }
                     s->fs.len = list(s);
-                    free(s->fs.view);
-                    s->fs.view_len = s->fs.len;
-                    s->fs.view = malloc(sizeof(FileEntry*) * s->fs.len);
-                    for (int i = 0; i < s->fs.len; i++) s->fs.view[i] = &s->fs.f_list[i];
-                    quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
+                    rebuild_view(s);
                     s->fs.index = 0;
                     s->fs.offset = 0;
                     memset(s->fs.marked, 0, 1024 * sizeof(int));
@@ -252,15 +248,11 @@ void input_monitor(struct AppState *s) {
                 if (strcmp(s->fs.cwd, "/") != 0) {
                     chdir("..");
                     getcwd(s->fs.cwd, PATH_MAX);
-                    for (int i = 0; i < s->fs.view_len; i++) {
+                    for (int i = 0; i < s->fs.len; i++) {
                         free(s->fs.f_list[i].path);
                     }
                     s->fs.len = list(s);
-                    free(s->fs.view);
-                    s->fs.view_len = s->fs.len;
-                    s->fs.view = malloc(sizeof(FileEntry*) * s->fs.len);
-                    for (int i = 0; i < s->fs.len; i++) s->fs.view[i] = &s->fs.f_list[i];
-                    quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
+                    rebuild_view(s);
                     if (fs_empty(s)) continue;
                     s->fs.index = 0;
                     s->fs.offset = 0;

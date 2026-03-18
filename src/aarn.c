@@ -92,6 +92,7 @@ int main() {
                 for (int i = 0; i < st.fs.len; i++) {
                     free(st.fs.f_list[i].path);
                 }
+                free(st.fs.view);
                 free(st.fs.f_list);
                 free(st.fs.cwd);
                 free(st.fs.marked);

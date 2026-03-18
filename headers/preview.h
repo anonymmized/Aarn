@@ -67,6 +67,7 @@ struct AppState {
     struct UIState ui;
     struct RuntimeState rt;
 };
+void rebuild_view(struct AppState *s);
 void print_line_clipped(const char *s, int max_width);
 int list(struct AppState *s);
 void get_term_size(int *rows, int *cols);
