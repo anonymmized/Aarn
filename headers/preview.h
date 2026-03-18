@@ -34,8 +34,10 @@ typedef struct {
 
 struct FSState {
     FileEntry *f_list;
+    FileEntry **view;
     SortMode sort_mode;
     int len;
+    int view_len;
     int capacity;
     int index;
     int offset;
@@ -76,7 +78,7 @@ void redraw(struct AppState *s);
 void draw_statusbar(struct AppState *s);
 FileType get_file_type(const char *path);
 void swap(void *a, void *b, size_t size);
-int file_cmp(const void *a, const void *b);
+int file_cmp_ptr(const void *a, const void *b);
 void quick_sort(void *base, int left, int right, size_t size, int (*cmp)(const void *, const void *));
 
 #endif

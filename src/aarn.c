@@ -78,7 +78,10 @@ int main() {
                     break;
                 }
                 st.fs.len = list(&st);
-                quick_sort(st.fs.f_list, 0, st.fs.len - 1, sizeof(FileEntry), file_cmp);
+                st.fs.view_len = st.fs.len;
+                st.fs.view = malloc(sizeof(FileEntry*) * st.fs.len);
+                for (int i = 0; i < st.fs.len; i++) st.fs.view[i] = &st.fs.f_list[i];
+                quick_sort(st.fs.view, 0, st.fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
                 enable_raw();
                 input_monitor(&st);
 
