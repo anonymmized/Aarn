@@ -44,7 +44,7 @@ int file_cmp(const void *a, const void *b) {
             struct stat st1, st2;
             stat(path1->path, &st1);
             stat(path2->path, &st2);
-            if (g_sort_mode == SORT_DATE_DESC) return st2.st_mtime - st1.st_mtime;
+            if (s->fs.sort_mode == SORT_DATE_DESC) return st2.st_mtime - st1.st_mtime;
             else return st1.st_mtime - st2.st_mtime;
         }
         default:
