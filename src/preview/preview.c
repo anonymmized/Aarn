@@ -39,6 +39,14 @@ int file_cmp(const void *a, const void *b) {
             return strcmp(name1, name2);
         case SORT_NAME_DESC:
             return strcmp(name2, name1);
+        case SORT_DATE_DESC:
+        case SORT_DATE_ASC: {
+            struct stat st1, st2;
+            stat(path1->path, &st1);
+            stat(path2->path, &st2);
+            if (g_sort_mode == SORT_DATE_DESC) return st2.st_mtime - st1.st_mtime;
+            else return st1.st_mtime - st2.st_mtime;
+        }
         default:
             return strcmp(name1, name2);
     }
@@ -81,26 +89,22 @@ void input_monitor(struct AppState *s) {
         if (s->rt.mode == 1) {
             if (c == 'a') g_sort_mode = SORT_NAME_ASC;
             else if (c == 'A') g_sort_mode = SORT_NAME_DESC;
-            else if (c == 27) {
+            else if (c == 'q') {
                 s->rt.mode = 0;
                 redraw(s);
                 continue;
-            } else continue;
+            } 
+            else if (c == 'd') g_sort_mode = SORT_DATE_DESC;
+            else if (c == 'D') g_sort_mode = SORT_DATE_ASC;
+            else continue;
 
             quick_sort(s->fs.f_list, 0, s->fs.len - 1, sizeof(FileEntry), file_cmp);
 
             s->fs.index = 0;
             s->fs.offset = 0;
-            s->rt.mode = 0;
             redraw(s);
             continue;
         }
-        /*
-        if (read(STDIN_FILENO, &c, 1) <= 0) {   
-            continue;
-        }
-        s->rt.last_key = c;
-        */
         if (c == 's') {
             quick_sort(s->fs.f_list, 0, s->fs.len - 1, sizeof(FileEntry), file_cmp);
             redraw(s);

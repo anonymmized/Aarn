@@ -29,6 +29,12 @@ void draw_statusbar(struct AppState *s) {
         case SORT_NAME_DESC:
             printf("sort:name↓");
             break;
+        case SORT_DATE_DESC:
+            printf("sort:date↓");
+            break;
+        case SORT_DATE_ASC:
+            printf("sort:date↑");
+            break;
         default:
             printf("sort:none");
             break;
