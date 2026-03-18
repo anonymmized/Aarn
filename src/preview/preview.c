@@ -12,6 +12,8 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
+SortMode g_sort_mode = SORT_NONE;
+
 void swap(void *a, void *b, size_t size) {
     char tmp[size];
     memcpy(tmp, a, size);
@@ -23,16 +25,23 @@ int file_cmp(const void *a, const void *b) {
     const FileEntry *path1 = a;
     const FileEntry *path2 = b;
 
-    if (path1->type == FT_DIR && path2->type != FT_DIR) return -1;
-    if (path1->type != FT_DIR && path2->type == FT_DIR) return 1;
-
     const char *name1 = strrchr(path1->path, '/');
     const char *name2 = strrchr(path2->path, '/');
 
     name1 = name1 ? name1 + 1 : path1->path;
     name2 = name2 ? name2 + 1 : path2->path;
+    if (g_sort_mode == SORT_NONE) return strcmp(name1, name2);
+    if (path1->type == FT_DIR && path2->type != FT_DIR) return -1;
+    if (path1->type != FT_DIR && path2->type == FT_DIR) return 1;
 
-    return strcmp(name1, name2);
+    switch (g_sort_mode) {
+        case SORT_NAME_ASC:
+            return strcmp(name1, name2);
+        case SORT_NAME_DESC:
+            return strcmp(name2, name1);
+        default:
+            return strcmp(name1, name2);
+    }
 }
 
 void quick_sort(void *base, int left, int right, size_t size, int (*cmp)(const void *, const void *)) {
@@ -67,13 +76,39 @@ void input_monitor(struct AppState *s) {
     redraw(s);
     while (1) {
         char c;
+        if (read(STDIN_FILENO, &c, 1) <= 0) continue;
+        s->rt.last_key = c;
+        if (s->rt.mode == 1) {
+            if (c == 'a') g_sort_mode = SORT_NAME_ASC;
+            else if (c == 'A') g_sort_mode = SORT_NAME_DESC;
+            else if (c == 27) {
+                s->rt.mode = 0;
+                redraw(s);
+                continue;
+            } else continue;
+
+            quick_sort(s->fs.f_list, 0, s->fs.len - 1, sizeof(FileEntry), file_cmp);
+
+            s->fs.index = 0;
+            s->fs.offset = 0;
+            s->rt.mode = 0;
+            redraw(s);
+            continue;
+        }
+        /*
         if (read(STDIN_FILENO, &c, 1) <= 0) {   
             continue;
         }
         s->rt.last_key = c;
+        */
         if (c == 's') {
-            quick_sort(s->fs.f_list, 0, s->fs.len - 1, sizeof(char *), file_cmp);
+            quick_sort(s->fs.f_list, 0, s->fs.len - 1, sizeof(FileEntry), file_cmp);
             redraw(s);
+        }
+        if (c == '/') {
+            s->rt.mode = 1;
+            redraw(s);
+            continue;
         }
         if (c == '\n') {
             s->rt.last_key = 'E';
@@ -173,7 +208,7 @@ void input_monitor(struct AppState *s) {
                 s->rt.last_key = 'R';
                 const char *path = s->fs.f_list[s->fs.index].path;
                 if (fs_empty(s)) continue;
-                if (s->fs.type == FT_DIR) {
+                if (s->fs.f_list[s->fs.index].type == FT_DIR) {
                     if (chdir(path) == -1) {
                         continue;
                     }

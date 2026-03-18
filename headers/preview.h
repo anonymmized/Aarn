@@ -11,6 +11,16 @@
 #define GAP 2
 
 typedef enum {
+    SORT_NONE,
+    SORT_NAME_ASC,
+    SORT_NAME_DESC,
+    SORT_DATE_DESC,
+    SORT_DATE_ASC
+} SortMode;
+
+extern SortMode g_sort_mode;
+
+typedef enum {
     FT_DIR = 0,
     FT_TEXT,
     FT_BINARY,
@@ -24,6 +34,7 @@ typedef struct {
 
 struct FSState {
     FileEntry *f_list;
+    SortMode sort_mode;
     int len;
     int capacity;
     int index;
@@ -31,7 +42,6 @@ struct FSState {
     int real;
     int *marked;
     int marked_len;
-    FileType type;
     char *cwd;
 };
 
@@ -65,7 +75,6 @@ void input_monitor(struct AppState *s);
 void redraw(struct AppState *s);
 void draw_statusbar(struct AppState *s);
 FileType get_file_type(const char *path);
-void update_current_file_type(struct AppState *s);
 void swap(void *a, void *b, size_t size);
 int file_cmp(const void *a, const void *b);
 void quick_sort(void *base, int left, int right, size_t size, int (*cmp)(const void *, const void *));

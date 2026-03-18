@@ -14,18 +14,30 @@ void draw_statusbar(struct AppState *s) {
             printf("Normal");
             break;
         case 1:
-            printf("Search");
+            printf("Sorting");
             break;
         case 2:
             printf("\033[%d;1H\033[K", s->ui.footer_row + 1);
             printf("\033[%d;1HMarked [%d]", s->ui.footer_row, s->fs.marked_len);
             break;
     }
+    printf("\033[%d;70H", s->ui.footer_row);
+    switch (g_sort_mode) {
+        case SORT_NAME_ASC:
+            printf("sort:name↑");
+            break;
+        case SORT_NAME_DESC:
+            printf("sort:name↓");
+            break;
+        default:
+            printf("sort:none");
+            break;
+    }
     if (s->rt.mode != 2) {
         printf("\033[%d;15HLk: %c", s->ui.footer_row, s->rt.last_key);
         printf("\033[%d;25H%d|%d", s->ui.footer_row, s->fs.index + 1, s->fs.len);
-        FileType cur_type = s->fs.f_list[s->fs.index].type;
-        switch (cur_type) {
+        FileType type = s->fs.f_list[s->fs.index].type; 
+        switch (type) {
             case FT_DIR:
                 printf("\033[%d;45H\033[97;100m<DIR>\033[0m", s->ui.footer_row);
                 break;
