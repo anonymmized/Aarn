@@ -56,7 +56,6 @@ void rebuild_view(struct AppState *s) {
     s->fs.view = realloc(s->fs.view, sizeof(FileEntry*) * s->fs.len);
     for (int i = 0; i < s->fs.len; i++) s->fs.view[i] = &s->fs.f_list[i];
     s->fs.view_len = s->fs.len;
-    quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
 }
 
 void quick_sort(void *base, int left, int right, size_t size, int (*cmp)(const void *, const void *)) {
@@ -122,6 +121,8 @@ void input_monitor(struct AppState *s) {
             if (c == 27) {
                 s->rt.mode = 0;
                 rebuild_view(s);
+                filter_view(s, s->fs.enter_search);
+                sort_view(s);
                 redraw(s);
                 continue;
             }
@@ -153,37 +154,31 @@ void input_monitor(struct AppState *s) {
             redraw(s);
             continue;
         }
+        int is_sort = 1;
         if (c == 'a') {
             g_sort_mode = SORT_NAME_ASC;
-            quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
-            s->fs.index = 0;
-            s->fs.offset = 0;
-            redraw(s);
         }
         else if (c == 'A') {
             g_sort_mode = SORT_NAME_DESC;
-            quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
-            s->fs.index = 0;
-            s->fs.offset = 0;
-            redraw(s);
         }
         else if (c == 'd') {
             g_sort_mode = SORT_DATE_ASC;
-            quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
-            s->fs.index = 0;
-            s->fs.offset = 0;
-            redraw(s);
         }
         else if (c == 'D') {
             g_sort_mode = SORT_DATE_DESC;
-            quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
+        }
+        else is_sort = 0;
+        if (is_sort) {
+            filter_view(s, s->fs.enter_search);
+            sort_view(s);
             s->fs.index = 0;
             s->fs.offset = 0;
             redraw(s);
+            continue;
         }
         
         if (c == 's') {
-            quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
+            sort_view(s);
             redraw(s);
         }
         if (c == '/') {
@@ -213,6 +208,8 @@ void input_monitor(struct AppState *s) {
                 }
                 s->fs.len = list(s);
                 rebuild_view(s);
+                filter_view(s, s->fs.enter_search);
+                sort_view(s);
                 if (fs_empty(s)) continue;
                 s->fs.index = 0;
                 s->fs.offset = 0;
@@ -236,6 +233,8 @@ void input_monitor(struct AppState *s) {
                 }
                 s->fs.len = list(s);
                 rebuild_view(s);
+                filter_view(s, s->fs.enter_search);
+                sort_view(s);
                 if (fs_empty(s)) continue;
                 s->fs.index = 0;
                 s->fs.offset = 0;
@@ -309,6 +308,8 @@ void input_monitor(struct AppState *s) {
                     }
                     s->fs.len = list(s);
                     rebuild_view(s);
+                    filter_view(s, s->fs.enter_search);
+                    sort_view(s);
                     s->fs.index = 0;
                     s->fs.offset = 0;
                     memset(s->fs.marked, 0, 1024 * sizeof(int));
@@ -330,6 +331,8 @@ void input_monitor(struct AppState *s) {
                     }
                     s->fs.len = list(s);
                     rebuild_view(s);
+                    filter_view(s, s->fs.enter_search);
+                    sort_view(s);
                     if (fs_empty(s)) continue;
                     s->fs.index = 0;
                     s->fs.offset = 0;
