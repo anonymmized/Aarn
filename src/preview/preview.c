@@ -105,6 +105,11 @@ void search_files(struct AppState *s, char *pattern) {
     s->fs.offset = 0;
 }
 
+void flush_input() {
+    char tmp;
+    while (read(STDIN_FILENO, &tmp, 1) > 0);
+}
+
 void input_monitor(struct AppState *s) {
     s->fs.index = 0;
     s->fs.offset = 0; 
@@ -116,15 +121,19 @@ void input_monitor(struct AppState *s) {
         if (read(STDIN_FILENO, &c, 1) <= 0) continue;
         s->rt.last_key = c;
         if (s->rt.mode == 3) {
+            if (c == 'q') {
+                s->rt.mode = 0;
+                rebuild_view(s);
+                redraw(s);
+                continue;
+            }
             if (c == '\n') {
-                s->fs.enter_search[s->fs.last_entered] = '\0';
-                if (s->fs.enter_search[0] == '\0') rebuild_view(s);
                 s->rt.mode = 0;
                 redraw(s);
                 continue;
             }
 
-            if (c == 127) {
+            if (c == 127 || c == 8) {
                 if (s->fs.last_entered > 0) {
                     s->fs.last_entered--;
                     s->fs.enter_search[s->fs.last_entered] = '\0';
@@ -133,9 +142,12 @@ void input_monitor(struct AppState *s) {
                 redraw(s);
                 continue;
             }
-            if (s->fs.last_entered < 1023) {
-                s->fs.enter_search[s->fs.last_entered++] = c;
-                s->fs.enter_search[s->fs.last_entered] = '\0';
+
+            if (c >= 32 && c <= 126) {
+                if (s->fs.last_entered < 1023) {
+                    s->fs.enter_search[s->fs.last_entered++] = c;
+                    s->fs.enter_search[s->fs.last_entered] = '\0';
+                }
             }
             search_files(s, s->fs.enter_search);
             redraw(s);
