@@ -94,7 +94,7 @@ void search_files(struct AppState *s, char *pattern) {
         FileEntry *entry = &s->fs.f_list[i];
         char *name = strrchr(entry->path, '/');
         name = name ? name + 1 : entry->path;
-        if (strncmp(name, pattern, strlen(pattern)) == 0) {
+        if (strstr(name, pattern) != NULL) {
             s->fs.view[s->fs.view_len++] = entry;
         }
     }
