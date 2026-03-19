@@ -53,8 +53,7 @@ int file_cmp_ptr(const void *a, const void *b) {
 }
 
 void rebuild_view(struct AppState *s) {
-    free(s->fs.view);
-    s->fs.view_len = s->fs.len;
+    s->fs.view = realloc(s->fs.view, sizeof(FileEntry*) * s->fs.len)
     s->fs.view = malloc(sizeof(FileEntry*) * s->fs.len);
     for (int i = 0; i < s->fs.len; i++) s->fs.view[i] = &s->fs.f_list[i];
     quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
@@ -84,26 +83,23 @@ void quick_sort(void *base, int left, int right, size_t size, int (*cmp)(const v
     }
 }
 
-void search_files(struct AppState *s, char *pattern) {
+void filter_view(struct AppState *s, char *pattern) {
     s->fs.view_len = 0;
     if (pattern[0] == '\0') {
-        rebuild_view(s);
+        for (int i = 0; i < s->fs.len; i++) s->fs.view[s->fs.view_len++] = &s->fs.f_list[i];
         return;
     }
     for (int i = 0; i < s->fs.len; i++) {
         FileEntry *entry = &s->fs.f_list[i];
         char *name = strrchr(entry->path, '/');
         name = name ? name + 1 : entry->path;
-        if (strstr(name, pattern) != NULL) {
-            s->fs.view[s->fs.view_len++] = entry;
-        }
+        if (strstr(name, pattern)) s->fs.view[s->fs.view_len++] = entry;
     }
-    if (s->fs.view_len > 0) {
+}
+
+void sort_view(struct AppState *s) {
+    if (s->fs.view_len > 1) {
         quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
-    }
-    if (s->fs.view_len == 0) {
-        s->fs.index = 0;
-        s->fs.offset = 0;
     }
 }
 
@@ -140,7 +136,8 @@ void input_monitor(struct AppState *s) {
                     s->fs.last_entered--;
                     s->fs.enter_search[s->fs.last_entered] = '\0';
                 }
-                search_files(s, s->fs.enter_search);
+                filter_view(s, s->fs.enter_search);
+                sort_view(s);
                 redraw(s);
                 continue;
             }
@@ -151,7 +148,8 @@ void input_monitor(struct AppState *s) {
                     s->fs.enter_search[s->fs.last_entered] = '\0';
                 }
             }
-            search_files(s, s->fs.enter_search);
+            filter_view(s, s->fs.enter_search);
+            sort_view(s);
             redraw(s);
             continue;
         }
