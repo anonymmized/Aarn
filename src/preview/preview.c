@@ -94,20 +94,41 @@ void input_monitor(struct AppState *s) {
         char c;
         if (read(STDIN_FILENO, &c, 1) <= 0) continue;
         s->rt.last_key = c;
+        if (s->rt.mode == 3) {
+            if (c == '\n') {
+                s->fs.enter_search[s->fs.last_entered] = '\0';
+                s->rt.mode = 0;
+                redraw(s);
+                continue;
+            }
+
+            if (c == 127) {
+                if (s->fs.last_entered > 0) {
+                    s->fs.last_entered--;
+                    s->fs.enter_search[s->fs.last_entered] = '\0';
+                }
+                redraw(s);
+                continue;
+            }
+            if (s->fs.last_entered < 1023) {
+                s->fs.enter_search[s->fs.last_entered++] = c;
+                s->fs.enter_search[s->fs.last_entered] = '\0';
+            }
+            redraw(s);
+            continue;
+        }
         if (s->rt.mode == 1) {
             if (c == 'a') g_sort_mode = SORT_NAME_ASC;
             else if (c == 'A') g_sort_mode = SORT_NAME_DESC;
+            else if (c == 'd') g_sort_mode = SORT_DATE_ASC;
+            else if (c == 'D') g_sort_mode = SORT_DATE_DESC;
             else if (c == 'q') {
                 s->rt.mode = 0;
                 redraw(s);
                 continue;
-            } 
-            else if (c == 'd') g_sort_mode = SORT_DATE_DESC;
-            else if (c == 'D') g_sort_mode = SORT_DATE_ASC;
+            }
             else continue;
-
             quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
-
             s->fs.index = 0;
             s->fs.offset = 0;
             redraw(s);
@@ -119,6 +140,13 @@ void input_monitor(struct AppState *s) {
         }
         if (c == '/') {
             s->rt.mode = 1;
+            redraw(s);
+            continue;
+        }
+        if (c == ':') {
+            s->rt.mode = 3;
+            s->fs.enter_search = calloc(1024, 1);
+            s->fs.last_entered = 0;
             redraw(s);
             continue;
         }

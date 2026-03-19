@@ -45,6 +45,8 @@ struct FSState {
     int *marked;
     int marked_len;
     char *cwd;
+    char *enter_search;
+    int last_entered;
 };
 
 struct UIState {

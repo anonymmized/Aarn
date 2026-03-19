@@ -20,6 +20,11 @@ void draw_statusbar(struct AppState *s) {
             printf("\033[%d;1H\033[K", s->ui.footer_row + 1);
             printf("\033[%d;1HMarked [%d]", s->ui.footer_row, s->fs.marked_len);
             break;
+        case 3:
+            printf("\033[%d;1H\033[K", s->ui.footer_row);
+            printf("\033[%d;1H\033[K", s->ui.footer_row + 1);
+            printf("\033[%d;1H: %s", s->ui.footer_row, s->fs.enter_search);
+            return;
     }
     printf("\033[%d;70H", s->ui.footer_row);
     switch (g_sort_mode) {
