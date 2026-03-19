@@ -84,6 +84,27 @@ void quick_sort(void *base, int left, int right, size_t size, int (*cmp)(const v
     }
 }
 
+void search_files(struct AppState *s, char *pattern) {
+    s->fs.view_len = 0;
+    if (pattern[0] == '\0') {
+        rebuild_view(s);
+        return;
+    }
+    for (int i = 0; i < s->fs.len; i++) {
+        FileEntry *entry = &s->fs.f_list[i];
+        char *name = strrchr(entry->path, '/');
+        name = name ? name + 1 : entry->path;
+        if (strncmp(name, pattern, strlen(pattern)) == 0) {
+            s->fs.view[s->fs.view_len++] = entry;
+        }
+    }
+    if (s->fs.view_len > 0) {
+        quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
+    }
+    s->fs.index = 0;
+    s->fs.offset = 0;
+}
+
 void input_monitor(struct AppState *s) {
     s->fs.index = 0;
     s->fs.offset = 0; 
@@ -97,6 +118,7 @@ void input_monitor(struct AppState *s) {
         if (s->rt.mode == 3) {
             if (c == '\n') {
                 s->fs.enter_search[s->fs.last_entered] = '\0';
+                if (s->fs.enter_search[0] == '\0') rebuild_view(s);
                 s->rt.mode = 0;
                 redraw(s);
                 continue;
@@ -107,6 +129,7 @@ void input_monitor(struct AppState *s) {
                     s->fs.last_entered--;
                     s->fs.enter_search[s->fs.last_entered] = '\0';
                 }
+                search_files(s, s->fs.enter_search);
                 redraw(s);
                 continue;
             }
@@ -114,6 +137,7 @@ void input_monitor(struct AppState *s) {
                 s->fs.enter_search[s->fs.last_entered++] = c;
                 s->fs.enter_search[s->fs.last_entered] = '\0';
             }
+            search_files(s, s->fs.enter_search);
             redraw(s);
             continue;
         }
@@ -145,6 +169,7 @@ void input_monitor(struct AppState *s) {
         }
         if (c == ':') {
             s->rt.mode = 3;
+            if (s->fs.enter_search) free(s->fs.enter_search);
             s->fs.enter_search = calloc(1024, 1);
             s->fs.last_entered = 0;
             redraw(s);
