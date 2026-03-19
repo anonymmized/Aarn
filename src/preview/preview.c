@@ -84,7 +84,7 @@ void quick_sort(void *base, int left, int right, size_t size, int (*cmp)(const v
 
 void filter_view(struct AppState *s, char *pattern) {
     s->fs.view_len = 0;
-    if (pattern[0] == '\0') {
+    if (!pattern || pattern[0] == '\0') {
         for (int i = 0; i < s->fs.len; i++) s->fs.view[s->fs.view_len++] = &s->fs.f_list[i];
         return;
     }
@@ -97,9 +97,8 @@ void filter_view(struct AppState *s, char *pattern) {
 }
 
 void sort_view(struct AppState *s) {
-    if (s->fs.view_len > 1) {
-        quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
-    }
+    if (!s->fs.view || s->fs.view_len <= 1) return;
+    quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
 }
 
 void flush_input() {
@@ -112,6 +111,10 @@ void input_monitor(struct AppState *s) {
     s->fs.offset = 0; 
     s->rt.launched = 1;
     s->rt.mode = 0;
+    free(s->fs.enter_search);
+    s->fs.enter_search = NULL;
+    s->fs.last_entered = 0;
+    rebuild_view(s);
     redraw(s);
     while (1) {
         char c;
@@ -180,11 +183,6 @@ void input_monitor(struct AppState *s) {
         if (c == 's') {
             sort_view(s);
             redraw(s);
-        }
-        if (c == '/') {
-            s->rt.mode = 1;
-            redraw(s);
-            continue;
         }
         if (c == ':') {
             s->rt.mode = 3;
@@ -400,7 +398,18 @@ void redraw(struct AppState *s) {
         printf("\033[%d;%dH", i + 1, s->ui.width_list);
     }
     s->ui.preview_st = 0;
-    if (s->fs.view_len == 0) return;
+    if (s->fs.view_len == 0) {
+        draw_statusbar(s);
+        fflush(stdout);
+        return;
+    }
+
+    if (s->fs.index >= s->fs.view_len)
+        s->fs.index = s->fs.view_len - 1;
+
+    if (s->fs.index < 0)
+        s->fs.index = 0;
+
     FileEntry *cur = s->fs.view[s->fs.index];
     FileType cur_type = cur->type;
     if (cur_type == FT_BINARY) {

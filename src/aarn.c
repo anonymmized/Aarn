@@ -53,7 +53,7 @@ int main() {
         int output_code = get_command_id(argv[0]);
         switch (output_code) {
             case CMD_preview: {
-                struct AppState st;
+                struct AppState st = {0};
                 st.fs.marked_len = 0;
                 get_term_size(&st.ui.rows, &st.ui.cols);
                 st.ui.rows -= 2;
@@ -81,7 +81,9 @@ int main() {
                 st.fs.view_len = st.fs.len;
                 st.fs.view = malloc(sizeof(FileEntry*) * st.fs.len);
                 for (int i = 0; i < st.fs.len; i++) st.fs.view[i] = &st.fs.f_list[i];
-                quick_sort(st.fs.view, 0, st.fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
+                if (st.fs.view_len > 1) {
+                    quick_sort(st.fs.view, 0, st.fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
+                }
                 enable_raw();
                 input_monitor(&st);
 
@@ -96,6 +98,7 @@ int main() {
                 free(st.fs.f_list);
                 free(st.fs.cwd);
                 free(st.fs.marked);
+                free(st.fs.enter_search);
                 printf("\033[?25l");
                 break;
             }

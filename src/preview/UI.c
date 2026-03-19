@@ -13,9 +13,6 @@ void draw_statusbar(struct AppState *s) {
         case 0:
             printf("[NORMAL]");
             break;
-        case 1:
-            printf("[SORTING]");
-            break;
         case 2:
             printf("\033[%d;1H\033[K", s->ui.footer_row + 1);
             printf("\033[%d;1H[MARKED] [%d]", s->ui.footer_row, s->fs.marked_len);
