@@ -53,9 +53,9 @@ int file_cmp_ptr(const void *a, const void *b) {
 }
 
 void rebuild_view(struct AppState *s) {
-    s->fs.view = realloc(s->fs.view, sizeof(FileEntry*) * s->fs.len)
-    s->fs.view = malloc(sizeof(FileEntry*) * s->fs.len);
+    s->fs.view = realloc(s->fs.view, sizeof(FileEntry*) * s->fs.len);
     for (int i = 0; i < s->fs.len; i++) s->fs.view[i] = &s->fs.f_list[i];
+    s->fs.view_len = s->fs.len;
     quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
 }
 
@@ -153,23 +153,35 @@ void input_monitor(struct AppState *s) {
             redraw(s);
             continue;
         }
-        if (s->rt.mode == 1) {
-            if (c == 'a') g_sort_mode = SORT_NAME_ASC;
-            else if (c == 'A') g_sort_mode = SORT_NAME_DESC;
-            else if (c == 'd') g_sort_mode = SORT_DATE_ASC;
-            else if (c == 'D') g_sort_mode = SORT_DATE_DESC;
-            else if (c == 'q') {
-                s->rt.mode = 0;
-                redraw(s);
-                continue;
-            }
-            else continue;
+        if (c == 'a') {
+            g_sort_mode = SORT_NAME_ASC;
             quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
             s->fs.index = 0;
             s->fs.offset = 0;
             redraw(s);
-            continue;
         }
+        else if (c == 'A') {
+            g_sort_mode = SORT_NAME_DESC;
+            quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
+            s->fs.index = 0;
+            s->fs.offset = 0;
+            redraw(s);
+        }
+        else if (c == 'd') {
+            g_sort_mode = SORT_DATE_ASC;
+            quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
+            s->fs.index = 0;
+            s->fs.offset = 0;
+            redraw(s);
+        }
+        else if (c == 'D') {
+            g_sort_mode = SORT_DATE_DESC;
+            quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
+            s->fs.index = 0;
+            s->fs.offset = 0;
+            redraw(s);
+        }
+        
         if (c == 's') {
             quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
             redraw(s);
