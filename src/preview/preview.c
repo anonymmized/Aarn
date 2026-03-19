@@ -101,8 +101,10 @@ void search_files(struct AppState *s, char *pattern) {
     if (s->fs.view_len > 0) {
         quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
     }
-    s->fs.index = 0;
-    s->fs.offset = 0;
+    if (s->fs.view_len == 0) {
+        s->fs.index = 0;
+        s->fs.offset = 0;
+    }
 }
 
 void flush_input() {
@@ -121,7 +123,7 @@ void input_monitor(struct AppState *s) {
         if (read(STDIN_FILENO, &c, 1) <= 0) continue;
         s->rt.last_key = c;
         if (s->rt.mode == 3) {
-            if (c == 'q') {
+            if (c == 27) {
                 s->rt.mode = 0;
                 rebuild_view(s);
                 redraw(s);
@@ -333,6 +335,11 @@ void input_monitor(struct AppState *s) {
 }
 
 void redraw(struct AppState *s) {
+    if (s->fs.view_len == 0) {
+        draw_statusbar(s);
+        fflush(stdout);
+        return;
+    }
     if (fs_empty(s)) {
         clear_preview_area(s);
         draw_statusbar(s);
@@ -375,6 +382,7 @@ void redraw(struct AppState *s) {
         printf("\033[%d;%dH", i + 1, s->ui.width_list);
     }
     s->ui.preview_st = 0;
+    if (s->fs.view_len == 0) return;
     FileEntry *cur = s->fs.view[s->fs.index];
     FileType cur_type = cur->type;
     if (cur_type == FT_BINARY) {

@@ -23,7 +23,7 @@ void draw_statusbar(struct AppState *s) {
         case 3:
             printf("\033[%d;1H\033[K", s->ui.footer_row);
             printf("\033[%d;1H\033[K", s->ui.footer_row + 1);
-            printf("\033[%d;1H: %s", s->ui.footer_row, s->fs.enter_search);
+            printf("\033[%d;1H\033[K: %s", s->ui.footer_row, s->fs.enter_search);
             return;
     }
     printf("\033[%d;70H", s->ui.footer_row);
