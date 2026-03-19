@@ -235,7 +235,7 @@ void input_monitor(struct AppState *s) {
             }
             continue;
         }
-        if (c == 27) {
+        if (c == 'q') {
             s->rt.last_key = 'Q';
             s->rt.launched = 0;
             return;
