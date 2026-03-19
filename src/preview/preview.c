@@ -235,7 +235,7 @@ void input_monitor(struct AppState *s) {
             }
             continue;
         }
-        if (c == 'q') {
+        if (c == 27) {
             s->rt.last_key = 'Q';
             s->rt.launched = 0;
             return;
@@ -336,6 +336,11 @@ void input_monitor(struct AppState *s) {
 
 void redraw(struct AppState *s) {
     if (s->fs.view_len == 0) {
+        s->ui.width_list = s->ui.cols / 3;
+        for (int r = 1; r <= s->ui.rows; r++) {
+            printf("\033[%d;1H\033[K", r);
+        }
+        clear_preview_area(s);
         draw_statusbar(s);
         fflush(stdout);
         return;
