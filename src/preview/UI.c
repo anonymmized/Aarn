@@ -11,20 +11,21 @@ void draw_statusbar(struct AppState *s) {
     printf("Mode: ");
     switch (s->rt.mode) {
         case 0:
-            printf("Normal");
+            printf("[NORMAL]");
             break;
         case 1:
-            printf("Sorting");
+            printf("[SORTING]");
             break;
         case 2:
             printf("\033[%d;1H\033[K", s->ui.footer_row + 1);
-            printf("\033[%d;1HMarked [%d]", s->ui.footer_row, s->fs.marked_len);
+            printf("\033[%d;1H[MARKED] [%d]", s->ui.footer_row, s->fs.marked_len);
             break;
         case 3:
             printf("\033[%d;1H\033[K", s->ui.footer_row);
+            printf("[SEARCH]");
             printf("\033[%d;1H\033[K", s->ui.footer_row + 1);
-            printf("\033[%d;1H\033[K: %s", s->ui.footer_row, s->fs.enter_search);
-            return;
+            printf("\033[%d;1H: %s", s->ui.footer_row + 1, s->fs.enter_search);
+            break;
     }
     printf("\033[%d;70H", s->ui.footer_row);
     switch (g_sort_mode) {
@@ -44,23 +45,25 @@ void draw_statusbar(struct AppState *s) {
             printf("sort:none");
             break;
     }
-    if (s->rt.mode != 2) {
+    if (s->rt.mode != 2 && s->rt.mode != 3) {
         printf("\033[%d;15HLk: %c", s->ui.footer_row, s->rt.last_key);
         printf("\033[%d;25H%d|%d", s->ui.footer_row, s->fs.index + 1, s->fs.view_len);
-        FileType type = s->fs.view[s->fs.index]->type; 
-        switch (type) {
-            case FT_DIR:
-                printf("\033[%d;45H\033[97;100m<DIR>\033[0m", s->ui.footer_row);
-                break;
-            case FT_TEXT:
-                printf("\033[%d;45H\033[97;100m<TXT>\033[0m", s->ui.footer_row);
-                break;
-            case FT_BINARY:
-                printf("\033[%d;45H\033[97;100m<BIN>\033[0m", s->ui.footer_row);
-                break;
-            case FT_UNKNOWN:
-                printf("\033[%d;45H\033[97;100m<UNK>\033[0m", s->ui.footer_row);
-                break;
+        if (s->fs.view_len > 0) {
+            FileType type = s->fs.view[s->fs.index]->type; 
+            switch (type) {
+                case FT_DIR:
+                    printf("\033[%d;45H\033[97;100m<DIR>\033[0m", s->ui.footer_row);
+                    break;
+                case FT_TEXT:
+                    printf("\033[%d;45H\033[97;100m<TXT>\033[0m", s->ui.footer_row);
+                    break;
+                case FT_BINARY:
+                    printf("\033[%d;45H\033[97;100m<BIN>\033[0m", s->ui.footer_row);
+                    break;
+                case FT_UNKNOWN:
+                    printf("\033[%d;45H\033[97;100m<UNK>\033[0m", s->ui.footer_row);
+                    break;
+            }
         }
         printf("\033[%d;55H", s->ui.footer_row);
         switch(s->ui.preview_st) {
