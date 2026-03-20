@@ -153,13 +153,14 @@ void input_monitor(struct AppState *s) {
         if (s->rt.mode == 3) {
             if (c == 27) {
                 s->rt.mode = 0;
-                if (s->fs.enter_search && s->fs.enter_search[0] != '\0') {
-                    filter_view(s, s->fs.enter_search);
-                    sort_view(s, fuzzy_cmp);
-                } else {
-                    rebuild_view(s);
-                    sort_view(s, file_cmp_ptr);
+                if (s->fs.enter_search) {
+                    s->fs.enter_search[0] = '\0';
                 }
+                s->fs.last_entered = 0;
+                rebuild_view(s);
+                sort_view(s, file_cmp_ptr);
+                s->fs.index = 0;
+                s->fs.offset = 0;
                 redraw(s);
                 continue;
             }
