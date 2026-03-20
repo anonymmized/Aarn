@@ -23,6 +23,11 @@ void draw_statusbar(struct AppState *s) {
             printf("\033[%d;1H\033[K", s->ui.footer_row + 1);
             printf("\033[%d;1H: %s", s->ui.footer_row + 1, s->fs.enter_search);
             break;
+        case 4:
+            printf("\033[%d;1H\033[K", s->ui.footer_row);
+            printf("[VIEWER]");
+            printf("\033[%d;1H\033[K", s->ui.footer_row + 1);
+            break;
     }
     printf("\033[%d;70H", s->ui.footer_row);
     switch (g_sort_mode) {
@@ -42,7 +47,7 @@ void draw_statusbar(struct AppState *s) {
             printf("sort:none");
             break;
     }
-    if (s->rt.mode != 2 && s->rt.mode != 3) {
+    if (s->rt.mode != 2 && s->rt.mode != 3 && s->rt.mode != 4) {
         printf("\033[%d;15HLk: %c", s->ui.footer_row, s->rt.last_key);
         printf("\033[%d;25H%d|%d", s->ui.footer_row, s->fs.index + 1, s->fs.view_len);
         if (s->fs.view_len > 0) {

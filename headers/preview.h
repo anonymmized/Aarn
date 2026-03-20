@@ -49,6 +49,7 @@ struct FSState {
     char *enter_search;
     int last_entered;
     int file_scroll;
+    int file_lines;
 };
 
 struct UIState {

@@ -145,6 +145,7 @@ void input_monitor(struct AppState *s) {
     s->fs.enter_search = NULL;
     s->fs.last_entered = 0;
     s->fs.file_scroll = 0;
+    s->fs.file_lines = 0;
     rebuild_view(s);
     redraw(s);
     while (1) {
@@ -169,13 +170,17 @@ void input_monitor(struct AppState *s) {
                     redraw(s);
                     continue;
                 }
+                int max_scroll = s->fs.file_lines - s->ui.rows;
+                if (max_scroll < 0) max_scroll = 0;
                 if (seq[1] == 'A') {
                     if (s->fs.file_scroll > 0) s->fs.file_scroll--;
+                    else s->fs.file_scroll = max_scroll;
                     redraw(s);
                     continue;
                 } 
                 if (seq[1] == 'B') {
-                    s->fs.file_scroll++;
+                    if (s->fs.file_scroll < max_scroll) s->fs.file_scroll++;
+                    else s->fs.file_scroll = 0;
                     redraw(s);
                     continue;
                 }
@@ -308,6 +313,8 @@ void input_monitor(struct AppState *s) {
                 redraw(s);
             } else if (s->fs.view[s->fs.index]->type == FT_TEXT) {
                s->rt.mode = 4;
+               s->fs.file_scroll = 0;
+               s->fs.file_lines = count_file_lines(s->fs.view[s->fs.index]->path);
                redraw(s);
                continue;
             }

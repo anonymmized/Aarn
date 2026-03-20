@@ -7,6 +7,18 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 
+int count_file_lines(const char *path) {
+    FILE *fp = fopen(path, "r");
+    if (!fp) {
+        return 0;
+    }
+    int lines = 0;
+    char line[1024];
+    while (fgets(line, sizeof(line), fp)) lines++;
+    fclose(fp);
+    return lines;
+}
+
 int list(struct AppState *s) {
     DIR *wdir = opendir(s->fs.cwd);
     if (!wdir) {
