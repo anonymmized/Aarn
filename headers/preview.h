@@ -48,6 +48,7 @@ struct FSState {
     char *cwd;
     char *enter_search;
     int last_entered;
+    int file_scroll;
 };
 
 struct UIState {

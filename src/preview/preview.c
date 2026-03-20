@@ -144,12 +144,44 @@ void input_monitor(struct AppState *s) {
     free(s->fs.enter_search);
     s->fs.enter_search = NULL;
     s->fs.last_entered = 0;
+    s->fs.file_scroll = 0;
     rebuild_view(s);
     redraw(s);
     while (1) {
         char c;
         if (read(STDIN_FILENO, &c, 1) <= 0) continue;
         s->rt.last_key = c;
+        if (s->rt.mode == 4) {
+            if (c == '\x1b') {
+                char seq[2];
+                if (read(STDIN_FILENO, &seq[0], 1) <= 0) {
+                    s->rt.mode = 0;
+                    redraw(s);
+                    continue;
+                }
+                if (seq[0] != '[') {
+                    s->rt.mode = 0;
+                    redraw(s);
+                    continue;
+                }
+                if (read(STDIN_FILENO, &seq[1], 1) <= 0) {
+                    s->rt.mode = 0;
+                    redraw(s);
+                    continue;
+                }
+                if (seq[1] == 'A') {
+                    if (s->fs.file_scroll > 0) s->fs.file_scroll--;
+                    redraw(s);
+                    continue;
+                } 
+                if (seq[1] == 'B') {
+                    s->fs.file_scroll++;
+                    redraw(s);
+                    continue;
+                }
+                continue;
+            }
+        }
         if (s->rt.mode == 3) {
             if (c == 27) {
                 s->rt.mode = 0;
@@ -274,7 +306,12 @@ void input_monitor(struct AppState *s) {
                 memset(s->fs.marked, 0, 1024 * sizeof(int));
                 s->fs.marked_len = 0;
                 redraw(s);
-            } else {
+            } else if (s->fs.view[s->fs.index]->type == FT_TEXT) {
+               s->rt.mode = 4;
+               redraw(s);
+               continue;
+            }
+            else {
                 redraw(s);
             }
             continue;
@@ -488,7 +525,7 @@ void redraw(struct AppState *s) {
         printf("\033[%d;%dH", 1, s->ui.cols_preview);
         printf("<BINARY FILE>");
     } else if (cur_type == FT_TEXT) {
-        draw_file_preview(s);
+        draw_file_preview(s, s->fs.file_scroll);
         s->ui.preview_st = 1;
     }
     draw_statusbar(s);

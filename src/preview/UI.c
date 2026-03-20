@@ -102,13 +102,15 @@ void print_name_clipped(struct AppState *s) {
     }
 }
 
-void draw_file_preview(struct AppState *s) {
+void draw_file_preview(struct AppState *s, int file_scroll) {
     FILE *fp = fopen(s->fs.view[s->fs.index]->path, "r");
     if (!fp) return;
     int preview_width = s->ui.cols - s->ui.cols_preview;
     char line[4096];
     int row = 1;
+    int lines_counter = 0;
     printf("\033[?7l");
+    while (lines_counter < file_scroll && fgets(line, sizeof(line), fp)) lines_counter += 1;
     while (fgets(line, sizeof(line), fp) && row <= s->ui.rows) {
         printf("\033[%d;%dH", row, s->ui.cols_preview);
         print_line_clipped(line, preview_width);
