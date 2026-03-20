@@ -84,5 +84,6 @@ FileType get_file_type(const char *path);
 void swap(void *a, void *b, size_t size);
 int file_cmp_ptr(const void *a, const void *b);
 void quick_sort(void *base, int left, int right, size_t size, int (*cmp)(const void *, const void *));
+void sort_view(struct AppState *s, int (*cmp)(const void *, const void *));
 
 #endif

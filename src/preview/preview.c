@@ -153,9 +153,13 @@ void input_monitor(struct AppState *s) {
         if (s->rt.mode == 3) {
             if (c == 27) {
                 s->rt.mode = 0;
-                rebuild_view(s);
-                filter_view(s, s->fs.enter_search);
-                sort_view(s, fuzzy_cmp);
+                if (s->fs.enter_search && s->fs.enter_search[0] != '\0') {
+                    filter_view(s, s->fs.enter_search);
+                    sort_view(s, fuzzy_cmp);
+                } else {
+                    rebuild_view(s);
+                    sort_view(s, file_cmp_ptr);
+                }
                 redraw(s);
                 continue;
             }
@@ -170,8 +174,13 @@ void input_monitor(struct AppState *s) {
                     s->fs.last_entered--;
                     s->fs.enter_search[s->fs.last_entered] = '\0';
                 }
-                filter_view(s, s->fs.enter_search);
-                sort_view(s, fuzzy_cmp);
+                if (s->fs.enter_search && s->fs.enter_search[0] != '\0') {
+                    filter_view(s, s->fs.enter_search);
+                    sort_view(s, fuzzy_cmp);
+                } else {
+                    rebuild_view(s);
+                    sort_view(s, file_cmp_ptr);
+                }
                 redraw(s);
                 continue;
             }
@@ -182,8 +191,13 @@ void input_monitor(struct AppState *s) {
                     s->fs.enter_search[s->fs.last_entered] = '\0';
                 }
             }
-            filter_view(s, s->fs.enter_search);
-            sort_view(s, fuzzy_cmp);
+            if (s->fs.enter_search && s->fs.enter_search[0] != '\0') {
+                filter_view(s, s->fs.enter_search);
+                sort_view(s, fuzzy_cmp);
+            } else {
+                rebuild_view(s);
+                sort_view(s, file_cmp_ptr);
+            }
             redraw(s);
             continue;
         }
@@ -202,8 +216,13 @@ void input_monitor(struct AppState *s) {
         }
         else is_sort = 0;
         if (is_sort) {
-            filter_view(s, s->fs.enter_search);
-            sort_view(s, fuzzy_cmp);
+            if (s->fs.enter_search && s->fs.enter_search[0] != '\0') {
+                filter_view(s, s->fs.enter_search);
+                sort_view(s, fuzzy_cmp);
+            } else {
+                rebuild_view(s);
+                sort_view(s, file_cmp_ptr);
+            }
             s->fs.index = 0;
             s->fs.offset = 0;
             redraw(s);
@@ -211,7 +230,13 @@ void input_monitor(struct AppState *s) {
         }
         
         if (c == 's') {
-            sort_view(s, fuzzy_cmp);
+            if (s->fs.enter_search && s->fs.enter_search[0] != '\0') {
+                filter_view(s, s->fs.enter_search);
+                sort_view(s,fuzzy_cmp);
+            } else {
+                rebuild_view(s);
+                sort_view(s, file_cmp_ptr);
+            }
             redraw(s);
         }
         if (c == ':') {
@@ -235,9 +260,13 @@ void input_monitor(struct AppState *s) {
                     free(s->fs.f_list[i].path);
                 }
                 s->fs.len = list(s);
-                rebuild_view(s);
-                filter_view(s, s->fs.enter_search);
-                sort_view(s, fuzzy_cmp);
+                if (s->fs.enter_search && s->fs.enter_search[0] != '\0') {
+                    filter_view(s, s->fs.enter_search);
+                    sort_view(s, fuzzy_cmp);
+                } else {
+                    rebuild_view(s);
+                    sort_view(s, file_cmp_ptr);
+                }
                 if (fs_empty(s)) continue;
                 s->fs.index = 0;
                 s->fs.offset = 0;
@@ -260,9 +289,13 @@ void input_monitor(struct AppState *s) {
                     free(s->fs.f_list[i].path);
                 }
                 s->fs.len = list(s);
-                rebuild_view(s);
-                filter_view(s, s->fs.enter_search);
-                sort_view(s, fuzzy_cmp);
+                if (s->fs.enter_search && s->fs.enter_search[0]!= '\0') {
+                    filter_view(s, s->fs.enter_search);
+                    sort_view(s, fuzzy_cmp);
+                } else {
+                    rebuild_view(s);
+                    sort_view(s, file_cmp_ptr);
+                }
                 if (fs_empty(s)) continue;
                 s->fs.index = 0;
                 s->fs.offset = 0;
@@ -335,9 +368,13 @@ void input_monitor(struct AppState *s) {
                         free(s->fs.f_list[i].path);
                     }
                     s->fs.len = list(s);
-                    rebuild_view(s);
-                    filter_view(s, s->fs.enter_search);
-                    sort_view(s,fuzzy_cmp);
+                    if (s->fs.enter_search && s->fs.enter_search[0] != '\0') {
+                        filter_view(s, s->fs.enter_search);
+                        sort_view(s, fuzzy_cmp);
+                    } else {
+                        rebuild_view(s);
+                        sort_view(s, file_cmp_ptr);
+                    }
                     s->fs.index = 0;
                     s->fs.offset = 0;
                     memset(s->fs.marked, 0, 1024 * sizeof(int));
@@ -358,9 +395,13 @@ void input_monitor(struct AppState *s) {
                         free(s->fs.f_list[i].path);
                     }
                     s->fs.len = list(s);
-                    rebuild_view(s);
-                    filter_view(s, s->fs.enter_search);
-                    sort_view(s,fuzzy_cmp);
+                    if (s->fs.enter_search && s->fs.enter_search[0] != '\0') {
+                        filter_view(s, s->fs.enter_search);
+                        sort_view(s, fuzzy_cmp);
+                    } else {
+                        rebuild_view(s);
+                        sort_view(s, file_cmp_ptr);
+                    }
                     if (fs_empty(s)) continue;
                     s->fs.index = 0;
                     s->fs.offset = 0;
