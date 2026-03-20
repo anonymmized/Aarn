@@ -1,4 +1,5 @@
 #include "../../headers/UI.h"
+#include "../../headers/FS.h"
 #include "../../headers/preview.h"
 
 #include <stdio.h>
@@ -29,7 +30,8 @@ void draw_statusbar(struct AppState *s) {
             printf("\033[%d;1H\033[K", s->ui.footer_row + 1);
             break;
     }
-    printf("\033[%d;70H", s->ui.footer_row);
+    int sort_col = s->ui.cols > 18 ? s->ui.cols - 17 : 1;
+    printf("\033[%d;%dH", s->ui.footer_row, sort_col);
     switch (g_sort_mode) {
         case SORT_NAME_ASC:
             printf("sort:name↑");
@@ -48,26 +50,32 @@ void draw_statusbar(struct AppState *s) {
             break;
     }
     if (s->rt.mode != 2 && s->rt.mode != 3 && s->rt.mode != 4) {
-        printf("\033[%d;15HLk: %c", s->ui.footer_row, s->rt.last_key);
-        printf("\033[%d;25H%d|%d", s->ui.footer_row, s->fs.index + 1, s->fs.view_len);
+        int info_col = s->ui.cols > 55 ? 15 : 1;
+        printf("\033[%d;%dHLk: %c", s->ui.footer_row, info_col, s->rt.last_key ? s->rt.last_key : '-');
+        if (!view_empty(s)) {
+            int pos_col = s->ui.cols > 45 ? info_col + 10 : info_col + 8;
+            printf("\033[%d;%dH%d|%d", s->ui.footer_row, pos_col, s->fs.index + 1, s->fs.view_len);
+        }
         if (s->fs.view_len > 0) {
             FileType type = s->fs.view[s->fs.index]->type; 
+            int type_col = s->ui.cols > 35 ? s->ui.cols / 2 : 1;
             switch (type) {
                 case FT_DIR:
-                    printf("\033[%d;45H\033[97;100m<DIR>\033[0m", s->ui.footer_row);
+                    printf("\033[%d;%dH\033[97;100m<DIR>\033[0m", s->ui.footer_row, type_col);
                     break;
                 case FT_TEXT:
-                    printf("\033[%d;45H\033[97;100m<TXT>\033[0m", s->ui.footer_row);
+                    printf("\033[%d;%dH\033[97;100m<TXT>\033[0m", s->ui.footer_row, type_col);
                     break;
                 case FT_BINARY:
-                    printf("\033[%d;45H\033[97;100m<BIN>\033[0m", s->ui.footer_row);
+                    printf("\033[%d;%dH\033[97;100m<BIN>\033[0m", s->ui.footer_row, type_col);
                     break;
                 case FT_UNKNOWN:
-                    printf("\033[%d;45H\033[97;100m<UNK>\033[0m", s->ui.footer_row);
+                    printf("\033[%d;%dH\033[97;100m<UNK>\033[0m", s->ui.footer_row, type_col);
                     break;
             }
         }
-        printf("\033[%d;55H", s->ui.footer_row);
+        int preview_col = s->ui.cols > 28 ? s->ui.cols / 2 + 10 : 1;
+        printf("\033[%d;%dH", s->ui.footer_row, preview_col);
         switch(s->ui.preview_st) {
             case 0:
                 printf("Prv: empt");
@@ -99,7 +107,8 @@ void print_name_clipped(struct AppState *s) {
     char *name = strrchr(s->fs.view[s->fs.real]->path, '/');
     name = name ? name + 1 : s->fs.view[s->fs.real]->path;
     while (i < s->ui.width_list - 2 && name[i] && name[i] != '\n') {
-        putchar(name[i]);
+        unsigned char ch = (unsigned char)name[i];
+        putchar((ch >= 32 && ch < 127) ? ch : '?');
         i++;
     }
     if (name[i] != '\0') {
@@ -128,6 +137,11 @@ void draw_file_preview(struct AppState *s, int file_scroll) {
 
 void print_line_clipped(const char *s, int max_width) {
     for (int i = 0; i < max_width && s[i] && s[i] != '\n'; i++) {
-        putchar(s[i]);
+        unsigned char ch = (unsigned char)s[i];
+        if (ch == '\t') {
+            putchar(' ');
+            continue;
+        }
+        putchar((ch >= 32 && ch < 127) ? ch : '?');
     }
 }

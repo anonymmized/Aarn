@@ -1,8 +1,10 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
 #include <termios.h>
 #include <unistd.h>
+#include <ctype.h>
 #include "../headers/utils.h"
 #include <sys/stat.h>
 
@@ -20,6 +22,7 @@ Cmd cmds[] = {
 };
 
 struct termios orig;
+static int raw_enabled = 0;
 
 void delete_word(char *buf, int *cursor, int *len) {
     if (*cursor == 0) return;
@@ -66,8 +69,16 @@ char *read_command_line(char **history, int *index, int *history_len, const char
         if (c == '\n') {
             buf[len] = '\0';
             if (len > 0) {
+                if (*history_len == 100) {
+                    free(history[0]);
+                    memmove(history, history + 1, sizeof(history[0]) * 99);
+                    history[99] = NULL;
+                    *history_len = 99;
+                }
                 history[*history_len] = strdup(buf);
-                (*history_len)++;
+                if (history[*history_len]) {
+                    (*history_len)++;
+                }
             }
             *index = *history_len;
             printf("\n");
@@ -135,14 +146,22 @@ char *read_command_line(char **history, int *index, int *history_len, const char
 }
 
 void enable_raw(void) {
-    tcgetattr(STDIN_FILENO, &orig);
+    if (raw_enabled) return;
+    if (tcgetattr(STDIN_FILENO, &orig) == -1) return;
     struct termios raw = orig;
-    raw.c_lflag &= ~(ECHO | ICANON);
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN);
+    raw.c_iflag &= ~(IXON | ICRNL);
+    raw.c_cc[VMIN] = 1;
+    raw.c_cc[VTIME] = 0;
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == 0) {
+        raw_enabled = 1;
+    }
 }
 
 void disable_raw(void) {
+    if (!raw_enabled) return;
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig);
+    raw_enabled = 0;
 }
 
 void rredraw(const char *buf, const char *workin_dir, int cursor) {
@@ -183,29 +202,63 @@ int dir_exists(const char *path) {
 
 int parse_line(char *line, char **argv, int max) {
     int argc = 0;
-    line[strcspn(line, "\r\n")] = 0;
+    char *src = line;
+    char *dst = line;
 
-    while (*line && argc < max - 1) {
-        while (*line == ' ' || *line == '\t') line++;
-        if (!*line) break;
+    line[strcspn(line, "\r\n")] = '\0';
 
-        argv[argc++] = line;
-        while (*line && *line != ' ' && *line != '\t') line++;
-        if (*line) *line++ = 0;
+    while (*src && argc < max - 1) {
+        while (*src == ' ' || *src == '\t') src++;
+        if (!*src) break;
+
+        char quote = '\0';
+        argv[argc++] = dst;
+
+        while (*src) {
+            if (quote) {
+                if (*src == '\\' && quote == '"' && src[1] != '\0') {
+                    src++;
+                    *dst++ = *src++;
+                    continue;
+                }
+                if (*src == quote) {
+                    src++;
+                    quote = '\0';
+                    continue;
+                }
+                *dst++ = *src++;
+                continue;
+            }
+
+            if (*src == '\'' || *src == '"') {
+                quote = *src++;
+                continue;
+            }
+            if (*src == '\\' && src[1] != '\0') {
+                src++;
+                *dst++ = *src++;
+                continue;
+            }
+            if (*src == ' ' || *src == '\t') {
+                break;
+            }
+
+            *dst++ = *src++;
+        }
+
+        char *next = src;
+        while (*next == ' ' || *next == '\t') next++;
+        *dst = '\0';
+        dst++;
+        src = next;
     }
 
     argv[argc] = NULL;
     return argc;
 }
 
-int get_command_id(char *line) {
-    char *argv[16];
-    int arg_count = parse_line(line, argv, 16);
-    if (arg_count < 1) {
-        printf("\n");
-        return -10;
-    }
-    char *command = argv[0];
+int get_command_id(const char *command) {
+    if (!command || command[0] == '\0') return -10;
     for (int i = 0; i < 10; i++) {
         if (strcmp(command, cmds[i].name) == 0) return cmds[i].id;
     }
@@ -232,4 +285,27 @@ Count dir_items(const char *dirname) {
     }
     closedir(w_dir);
     return c;
+}
+
+void clear_screen(void) {
+    printf("\033[2J\033[H");
+    fflush(stdout);
+}
+
+void print_sanitized_text(const char *text, bool preserve_tabs) {
+    for (const unsigned char *p = (const unsigned char *)text; *p != '\0'; p++) {
+        if (*p == '\n') {
+            putchar('\n');
+            continue;
+        }
+        if (*p == '\t' && preserve_tabs) {
+            putchar('\t');
+            continue;
+        }
+        if (isprint(*p)) {
+            putchar(*p);
+        } else {
+            putchar('?');
+        }
+    }
 }

@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 int atoi_n(const char *s, int pos, int len) {
     char tmp[5];
@@ -17,16 +18,29 @@ int atoi_n(const char *s, int pos, int len) {
 int touch_file(const char *path, char *stamp, int atime, int mtime, int has_stamp) {
     time_t t;
     if (has_stamp) {
-        int time_len = strlen(stamp);
+        int time_len = (int)strlen(stamp);
         char *dot = strchr(stamp, '.');
         int has_sec = (dot != NULL);
         int pos = 0;
         int year = 0;
-        if (time_len < 10) {
+        int main_len = dot ? (int)(dot - stamp) : time_len;
+        if (!(main_len == 8 || main_len == 10 || main_len == 12)) {
             fprintf(stderr, "touch: invalid time format\n");
             return 1;
         }
-        if (time_len >= 12) {
+        for (int i = 0; i < main_len; i++) {
+            if (!isdigit((unsigned char)stamp[i])) {
+                fprintf(stderr, "touch: invalid time format\n");
+                return 1;
+            }
+        }
+        if (has_sec) {
+            if (strlen(dot + 1) != 2 || !isdigit((unsigned char)dot[1]) || !isdigit((unsigned char)dot[2])) {
+                fprintf(stderr, "touch: invalid time format\n");
+                return 1;
+            }
+        }
+        if (main_len == 12) {
             year = atoi_n(stamp, 0, 4);
             pos = 4;
         } else {
@@ -97,7 +111,7 @@ int touch_file(const char *path, char *stamp, int atime, int mtime, int has_stam
 int parse_touch_flags(int argc, char **argv, int *start) {
     int flags = 0;
     int i = 1;
-    while (i < argc && argv[i][0] == '-' && argv[i][0] != '\0') {
+    while (i < argc && argv[i][0] == '-' && argv[i][1] != '\0') {
         for (int j = 1; argv[i][j] != '\0'; j++) {
             char c = argv[i][j];
             if (c == 'a') flags |= TOUCH_ATIME;
@@ -113,5 +127,4 @@ int parse_touch_flags(int argc, char **argv, int *start) {
     *start = i;
     return flags;
 }
-
 

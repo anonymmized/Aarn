@@ -10,6 +10,7 @@
 int remove_item(const char *name, int confirm, int recursive, int force, int verbose);
 
 int remove_dir(const char *dirname);
+int ask_rm_confirmation(const char *prompt);
 
 int parse_rm_flags(int argc, char **argv, int *start);
 

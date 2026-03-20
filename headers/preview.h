@@ -31,6 +31,7 @@ typedef struct {
     char *path;
     FileType type;
     int score;
+    int marked;
 } FileEntry;
 
 struct FSState {
@@ -43,7 +44,6 @@ struct FSState {
     int index;
     int offset;
     int real;
-    int *marked;
     int marked_len;
     char *cwd;
     char *enter_search;
@@ -87,5 +87,7 @@ void swap(void *a, void *b, size_t size);
 int file_cmp_ptr(const void *a, const void *b);
 void quick_sort(void *base, int left, int right, size_t size, int (*cmp)(const void *, const void *));
 void sort_view(struct AppState *s, int (*cmp)(const void *, const void *));
+void refresh_file_scroll(struct AppState *s);
+void update_terminal_size(struct AppState *s);
 
 #endif

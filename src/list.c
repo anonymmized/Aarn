@@ -24,6 +24,7 @@ int list_wd(char *dir, int hidden) {
     rewinddir(w_dir);
     
     while ((ent = readdir(w_dir)) != NULL) {
+        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
         if (!hidden && ent->d_name[0] == '.') continue;
         if (items_count < 10) {
             if (ent->d_type == DT_DIR) fprintf(stdout, ITALIC BOLD "%s " ESC, ent->d_name);
@@ -41,7 +42,7 @@ int list_wd(char *dir, int hidden) {
 int parse_ls_flags(int argc, char **argv, int *start) {
     int flags = 0;
     int i = 1;
-    while (i < argc && argv[i][0] == '-' && argv[i][0] != '\0') {
+    while (i < argc && argv[i][0] == '-' && argv[i][1] != '\0') {
         for (int j = 1; argv[i][j] != '\0'; j++) {
             char c = argv[i][j];
             if (c == 'a') flags |= LS_A;

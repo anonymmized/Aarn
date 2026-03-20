@@ -1,6 +1,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <stdbool.h>
+
 enum Commands {CMD_exit, CMD_pwd, CMD_ls, CMD_cd, CMD_clear, CMD_cat, CMD_rm, CMD_mkdir, CMD_touch, CMD_preview};
 
 typedef struct {
@@ -19,7 +21,7 @@ int get_line(char *line, int lim);
 char *skip_spaces(char *s);
 int dir_exists(const char *path);
 int parse_line(char *line, char **argv, int max);
-int get_command_id(char *line);
+int get_command_id(const char *command);
 const char *return_last_dir(const char *workin);
 Count dir_items(const char *dirname);
 void enable_raw(void);
@@ -27,5 +29,7 @@ void disable_raw(void);
 void rredraw(const char *buf, const char *workin_dir, int cursor);
 void delete_word(char *buf, int *cursor, int *len);
 char *read_command_line(char **history, int *index, int *history_len, const char *workin_dir);
+void clear_screen(void);
+void print_sanitized_text(const char *text, bool preserve_tabs);
 
 #endif

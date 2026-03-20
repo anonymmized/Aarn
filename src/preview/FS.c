@@ -5,6 +5,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <sys/stat.h>
 
 int count_file_lines(const char *path) {
@@ -22,7 +23,7 @@ int count_file_lines(const char *path) {
 int list(struct AppState *s) {
     DIR *wdir = opendir(s->fs.cwd);
     if (!wdir) {
-        fprintf(stderr, "Error wit opening dir\n");
+        perror("opendir");
         return 0;
     }
     s->fs.len = 0;
@@ -34,19 +35,28 @@ int list(struct AppState *s) {
             s->fs.capacity *= 2;
             FileEntry *tmp = realloc(s->fs.f_list, sizeof(FileEntry) * s->fs.capacity);
             if (!tmp) {
-                perror("malloc");
+                perror("realloc");
                 closedir(wdir);
                 return s->fs.len;
             }
             s->fs.f_list = tmp;
         }
-        char fullpath[1024];
-        snprintf(fullpath, sizeof(fullpath), "%s/%s", s->fs.cwd, ent->d_name);
+        char fullpath[PATH_MAX];
+        if (snprintf(fullpath, sizeof(fullpath), "%s/%s", s->fs.cwd, ent->d_name) >= (int)sizeof(fullpath)) {
+            fprintf(stderr, "preview: path too long\n");
+            continue;
+        }
 
         s->fs.f_list[s->fs.len].path = malloc(strlen(fullpath) + 1);
+        if (!s->fs.f_list[s->fs.len].path) {
+            perror("malloc");
+            closedir(wdir);
+            return s->fs.len;
+        }
         strcpy(s->fs.f_list[s->fs.len].path, fullpath);
-
         s->fs.f_list[s->fs.len].type = get_file_type(fullpath);
+        s->fs.f_list[s->fs.len].score = 0;
+        s->fs.f_list[s->fs.len].marked = 0;
         s->fs.len++;
     }
     closedir(wdir);
@@ -55,6 +65,10 @@ int list(struct AppState *s) {
 
 int fs_empty(struct AppState *s) {
     return s->fs.len == 0;
+}
+
+int view_empty(struct AppState *s) {
+    return s->fs.view_len == 0;
 }
 
 FileType get_file_type(const char *path) {

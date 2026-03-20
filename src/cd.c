@@ -17,7 +17,7 @@ int cmd_cd(const char *path) {
 int parse_cd_flags(int argc, char **argv, int *start) {
     int flags = 0;
     int i = 1;
-    while (i < argc && argv[i][0] == '-' && argv[i][0] != '\0') {
+    while (i < argc && argv[i][0] == '-' && argv[i][1] != '\0') {
         for (int j = 1; argv[i][j] != '\0'; j++) {
             char c = argv[i][j];
             if (c == 'h') flags |= CD_HL;

@@ -1,4 +1,5 @@
 #include "../headers/cat.h"
+#include "../headers/utils.h"
 #include "../helps/helps.h"
 #include <stdio.h>
 
@@ -7,7 +8,9 @@ int cat_file(const char *filename) {
     if (!fp) { perror("fopen"); return 1; }
 
     char buf[MAXLINE];
-    while (fgets(buf, sizeof(buf), fp)) fputs(buf, stdout);
+    while (fgets(buf, sizeof(buf), fp)) {
+        print_sanitized_text(buf, 1);
+    }
 
     if (ferror(fp)) {
         perror("fgets");
