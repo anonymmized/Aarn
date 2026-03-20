@@ -55,7 +55,11 @@ struct FSState {
 struct UIState {
     int rows;
     int cols;
+    int top_row;
+    int divider_row;
     int footer_row;
+    int help_row;
+    int frame_bottom;
     int width_list;
     int cols_preview;
     int preview_st;
@@ -72,6 +76,16 @@ struct AppState {
     struct UIState ui;
     struct RuntimeState rt;
 };
+
+typedef enum {
+    PK_NONE = 0,
+    PK_ESC,
+    PK_UP,
+    PK_DOWN,
+    PK_RIGHT,
+    PK_LEFT
+} PreviewKey;
+
 void rebuild_view(struct AppState *s);
 void print_line_clipped(const char *s, int max_width);
 int list(struct AppState *s);
@@ -89,5 +103,6 @@ void quick_sort(void *base, int left, int right, size_t size, int (*cmp)(const v
 void sort_view(struct AppState *s, int (*cmp)(const void *, const void *));
 void refresh_file_scroll(struct AppState *s);
 void update_terminal_size(struct AppState *s);
+void sync_runtime_mode(struct AppState *s);
 
 #endif

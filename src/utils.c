@@ -66,7 +66,7 @@ char *read_command_line(char **history, int *index, int *history_len, const char
             continue;
         }
 
-        if (c == '\n') {
+        if (c == '\n' || c == '\r') {
             buf[len] = '\0';
             if (len > 0) {
                 if (*history_len == 100) {

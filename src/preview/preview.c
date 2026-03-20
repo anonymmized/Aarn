@@ -1,6 +1,7 @@
 #include "../../headers/preview.h"
 #include "../../headers/UI.h"
 #include "../../headers/FS.h"
+#include "../../headers/rm.h"
 #include "../../headers/utils.h"
 
 #include <ctype.h>
@@ -16,6 +17,8 @@
 SortMode g_sort_mode = SORT_NONE;
 
 static volatile sig_atomic_t g_resize_requested = 0;
+static int reload_directory(struct AppState *s);
+static void rebuild_and_sort_view(struct AppState *s);
 
 static void handle_preview_resize(int signo) {
     (void)signo;
@@ -29,6 +32,105 @@ static void free_file_list(struct AppState *s) {
     }
     s->fs.len = 0;
     s->fs.view_len = 0;
+    s->fs.marked_len = 0;
+}
+
+static void recount_marked(struct AppState *s) {
+    s->fs.marked_len = 0;
+    for (int i = 0; i < s->fs.len; i++) {
+        if (s->fs.f_list[i].marked) s->fs.marked_len++;
+    }
+}
+
+void sync_runtime_mode(struct AppState *s) {
+    s->rt.mode = s->fs.marked_len > 0 ? 2 : 0;
+}
+
+static void clear_all_marks(struct AppState *s) {
+    for (int i = 0; i < s->fs.len; i++) {
+        s->fs.f_list[i].marked = 0;
+    }
+    s->fs.marked_len = 0;
+    sync_runtime_mode(s);
+}
+
+static void mark_all_items(struct AppState *s) {
+    for (int i = 0; i < s->fs.len; i++) {
+        s->fs.f_list[i].marked = 1;
+    }
+    recount_marked(s);
+    sync_runtime_mode(s);
+}
+
+static void invert_marks(struct AppState *s) {
+    for (int i = 0; i < s->fs.len; i++) {
+        s->fs.f_list[i].marked ^= 1;
+    }
+    recount_marked(s);
+    sync_runtime_mode(s);
+}
+
+static PreviewKey read_escape_key(void) {
+    int pending = 0;
+    if (ioctl(STDIN_FILENO, FIONREAD, &pending) == -1 || pending < 2) {
+        return PK_ESC;
+    }
+
+    char seq[2];
+    if (read(STDIN_FILENO, &seq[0], 1) <= 0) return PK_ESC;
+    if (read(STDIN_FILENO, &seq[1], 1) <= 0) return PK_ESC;
+    if (seq[0] != '[') return PK_ESC;
+
+    switch (seq[1]) {
+        case 'A':
+            return PK_UP;
+        case 'B':
+            return PK_DOWN;
+        case 'C':
+            return PK_RIGHT;
+        case 'D':
+            return PK_LEFT;
+        default:
+            return PK_ESC;
+    }
+}
+
+static int confirm_preview_action(struct AppState *s, const char *prompt) {
+    printf("\033[%d;2H", s->ui.help_row);
+    for (int i = 0; i < s->ui.cols - 3; i++) putchar(' ');
+    printf("\033[%d;3H%s [y/n]", s->ui.help_row, prompt);
+    fflush(stdout);
+
+    while (1) {
+        char c;
+        if (read(STDIN_FILENO, &c, 1) <= 0) continue;
+        if (c == 'y' || c == 'Y') return 1;
+        if (c == 'n' || c == 'N' || c == 'q' || c == '\x1b') return 0;
+    }
+}
+
+static int delete_marked_items(struct AppState *s) {
+    if (s->fs.marked_len == 0) return 0;
+
+    char prompt[128];
+    snprintf(prompt, sizeof(prompt), "delete %d marked item%s", s->fs.marked_len, s->fs.marked_len == 1 ? "" : "s");
+    int confirmed = confirm_preview_action(s, prompt);
+    if (!confirmed) return 0;
+
+    int failed = 0;
+    for (int i = 0; i < s->fs.len; i++) {
+        if (!s->fs.f_list[i].marked) continue;
+        if (remove_item(s->fs.f_list[i].path, 0, 1, 0, 0) != 0) {
+            failed = 1;
+        }
+    }
+
+    reload_directory(s);
+    s->rt.mode = 0;
+    if (!failed) {
+        s->rt.last_key = 'X';
+    }
+    return failed;
 }
 
 static void clamp_selection(struct AppState *s) {
@@ -65,16 +167,20 @@ void refresh_file_scroll(struct AppState *s) {
 
 void update_terminal_size(struct AppState *s) {
     get_term_size(&s->ui.rows, &s->ui.cols);
-    if (s->ui.rows < 4) s->ui.rows = 4;
-    if (s->ui.cols < 20) s->ui.cols = 20;
-    s->ui.rows -= 2;
+    if (s->ui.rows < 8) s->ui.rows = 8;
+    if (s->ui.cols < 40) s->ui.cols = 40;
+    s->ui.top_row = 2;
+    s->ui.rows -= 5;
     if (s->ui.rows < 1) s->ui.rows = 1;
-    s->ui.footer_row = s->ui.rows + 1;
-    s->ui.width_list = s->ui.cols / 3;
+    s->ui.divider_row = s->ui.top_row + s->ui.rows;
+    s->ui.footer_row = s->ui.divider_row + 1;
+    s->ui.help_row = s->ui.divider_row + 2;
+    s->ui.frame_bottom = s->ui.divider_row + 3;
+    s->ui.width_list = (s->ui.cols - 5) / 3;
     if (s->ui.width_list < 10) s->ui.width_list = 10;
-    if (s->ui.width_list >= s->ui.cols) s->ui.width_list = s->ui.cols - 1;
-    s->ui.cols_preview = s->ui.width_list + GAP + 1;
-    if (s->ui.cols_preview > s->ui.cols) s->ui.cols_preview = s->ui.cols;
+    if (s->ui.width_list >= s->ui.cols - 7) s->ui.width_list = s->ui.cols - 7;
+    s->ui.cols_preview = s->ui.width_list + 4;
+    if (s->ui.cols_preview > s->ui.cols - 3) s->ui.cols_preview = s->ui.cols - 3;
     clamp_selection(s);
 }
 
@@ -155,6 +261,7 @@ void rebuild_view(struct AppState *s) {
     s->fs.view = tmp;
     for (int i = 0; i < s->fs.len; i++) s->fs.view[i] = &s->fs.f_list[i];
     s->fs.view_len = s->fs.len;
+    recount_marked(s);
     clamp_selection(s);
 }
 
@@ -211,8 +318,10 @@ static void rebuild_and_sort_view(struct AppState *s) {
         rebuild_view(s);
         sort_view(s, file_cmp_ptr);
     }
+    recount_marked(s);
     clamp_selection(s);
     refresh_file_scroll(s);
+    sync_runtime_mode(s);
 }
 
 static int reload_directory(struct AppState *s) {
@@ -255,7 +364,7 @@ static void toggle_mark(struct AppState *s) {
     if (entry->marked) s->fs.marked_len++;
     else if (s->fs.marked_len > 0) s->fs.marked_len--;
 
-    s->rt.mode = s->fs.marked_len > 0 ? 2 : 0;
+    sync_runtime_mode(s);
 }
 
 static int enter_directory(struct AppState *s, const char *path) {
@@ -268,7 +377,6 @@ static int enter_directory(struct AppState *s, const char *path) {
 }
 
 static void leave_search_mode(struct AppState *s, int clear_query) {
-    s->rt.mode = 0;
     if (clear_query && s->fs.enter_search) {
         s->fs.enter_search[0] = '\0';
     }
@@ -313,33 +421,23 @@ void input_monitor(struct AppState *s) {
 
         if (s->rt.mode == 4) {
             if (c == 'q') {
-                s->rt.mode = 0;
+                sync_runtime_mode(s);
                 redraw(s);
                 continue;
             }
             if (c == '\x1b') {
-                char seq[2];
-                if (read(STDIN_FILENO, &seq[0], 1) <= 0) {
-                    s->rt.mode = 0;
-                    redraw(s);
-                    continue;
-                }
-                if (read(STDIN_FILENO, &seq[1], 1) <= 0) {
-                    s->rt.mode = 0;
-                    redraw(s);
-                    continue;
-                }
-
+                PreviewKey key = read_escape_key();
                 int max_scroll = s->fs.file_lines - s->ui.rows;
                 if (max_scroll < 0) max_scroll = 0;
-                if (seq[0] == '[' && seq[1] == 'A') {
+
+                if (key == PK_UP) {
                     s->fs.file_scroll = s->fs.file_scroll > 0 ? s->fs.file_scroll - 1 : max_scroll;
                     redraw(s);
-                } else if (seq[0] == '[' && seq[1] == 'B') {
+                } else if (key == PK_DOWN) {
                     s->fs.file_scroll = s->fs.file_scroll < max_scroll ? s->fs.file_scroll + 1 : 0;
                     redraw(s);
-                } else {
-                    s->rt.mode = 0;
+                } else if (key == PK_ESC) {
+                    sync_runtime_mode(s);
                     redraw(s);
                 }
             }
@@ -351,7 +449,7 @@ void input_monitor(struct AppState *s) {
                 leave_search_mode(s, 1);
                 continue;
             }
-            if (c == '\n') {
+            if (c == '\n' || c == '\r') {
                 leave_search_mode(s, 0);
                 continue;
             }
@@ -404,7 +502,7 @@ void input_monitor(struct AppState *s) {
             redraw(s);
             continue;
         }
-        if (c == '\n') {
+        if (c == '\n' || c == '\r') {
             if (view_empty(s)) continue;
             s->rt.last_key = 'E';
             const char *path = s->fs.view[s->fs.index]->path;
@@ -422,12 +520,31 @@ void input_monitor(struct AppState *s) {
         }
         if (c == 127 || c == 8) {
             s->rt.last_key = 'B';
-            s->rt.mode = 0;
             if (strcmp(s->fs.cwd, "/") != 0 && chdir("..") == 0) {
                 getcwd(s->fs.cwd, PATH_MAX);
                 reload_directory(s);
                 redraw(s);
             }
+            continue;
+        }
+        if (c == 'm') {
+            mark_all_items(s);
+            redraw(s);
+            continue;
+        }
+        if (c == 'u') {
+            clear_all_marks(s);
+            redraw(s);
+            continue;
+        }
+        if (c == 'i') {
+            invert_marks(s);
+            redraw(s);
+            continue;
+        }
+        if (c == 'x' && s->fs.marked_len > 0) {
+            delete_marked_items(s);
+            redraw(s);
             continue;
         }
         if (c == 'q') {
@@ -442,28 +559,32 @@ void input_monitor(struct AppState *s) {
             continue;
         }
         if (c == '\x1b') {
-            char seq[2];
-            if (read(STDIN_FILENO, &seq[0], 1) <= 0) continue;
-            if (read(STDIN_FILENO, &seq[1], 1) <= 0) continue;
+            PreviewKey key = read_escape_key();
+            if (key == PK_ESC) {
+                if (s->fs.marked_len > 0) {
+                    clear_all_marks(s);
+                    redraw(s);
+                }
+                continue;
+            }
 
-            if (seq[1] == 'A') {
+            if (key == PK_UP) {
                 s->rt.last_key = 'U';
                 move_selection(s, -1);
                 redraw(s);
-            } else if (seq[1] == 'B') {
+            } else if (key == PK_DOWN) {
                 s->rt.last_key = 'D';
                 move_selection(s, 1);
                 redraw(s);
-            } else if (seq[1] == 'C') {
+            } else if (key == PK_RIGHT) {
                 s->rt.last_key = 'R';
                 if (!view_empty(s) && s->fs.view[s->fs.index]->type == FT_DIR) {
                     if (enter_directory(s, s->fs.view[s->fs.index]->path) == 0) redraw(s);
                 } else {
                     redraw(s);
                 }
-            } else if (seq[1] == 'D') {
+            } else if (key == PK_LEFT) {
                 s->rt.last_key = 'L';
-                s->rt.mode = 0;
                 if (strcmp(s->fs.cwd, "/") != 0 && chdir("..") == 0) {
                     getcwd(s->fs.cwd, PATH_MAX);
                     reload_directory(s);
@@ -479,15 +600,16 @@ void input_monitor(struct AppState *s) {
 
 void redraw(struct AppState *s) {
     clamp_selection(s);
-    s->ui.width_list = s->ui.cols / 3;
+    s->ui.width_list = (s->ui.cols - 5) / 3;
     if (s->ui.width_list < 10) s->ui.width_list = 10;
-    if (s->ui.width_list >= s->ui.cols) s->ui.width_list = s->ui.cols - 1;
-    s->ui.cols_preview = s->ui.width_list + GAP + 1;
-    if (s->ui.cols_preview > s->ui.cols) s->ui.cols_preview = s->ui.cols;
+    if (s->ui.width_list >= s->ui.cols - 7) s->ui.width_list = s->ui.cols - 7;
+    s->ui.cols_preview = s->ui.width_list + 4;
+    if (s->ui.cols_preview > s->ui.cols - 3) s->ui.cols_preview = s->ui.cols - 3;
 
-    for (int r = 1; r <= s->ui.rows; r++) {
+    for (int r = 1; r <= s->ui.frame_bottom; r++) {
         printf("\033[%d;1H\033[K", r);
     }
+    draw_frame(s);
     clear_preview_area(s);
 
     if (view_empty(s)) {
@@ -500,7 +622,7 @@ void redraw(struct AppState *s) {
         s->fs.real = s->fs.offset + i;
         if (s->fs.real >= s->fs.view_len) break;
 
-        printf("\033[%d;1H", i + 1);
+        printf("\033[%d;2H", s->ui.top_row + i);
 
         if (s->fs.real == s->fs.index && s->fs.view[s->fs.real]->marked) {
             printf(CLR_CURSOR_MARKED " ");
@@ -518,13 +640,13 @@ void redraw(struct AppState *s) {
             printf(" ");
             print_name_clipped(s);
         }
-        printf("\033[%d;%dH", i + 1, s->ui.width_list);
+        printf("\033[%d;%dH", s->ui.top_row + i, s->ui.cols_preview - 2);
     }
 
     s->ui.preview_st = 0;
     FileEntry *cur = s->fs.view[s->fs.index];
     if (cur->type == FT_BINARY) {
-        printf("\033[%d;%dH<BINARY FILE>", 1, s->ui.cols_preview);
+        printf("\033[%d;%dH<BINARY FILE>", s->ui.top_row, s->ui.cols_preview + 1);
     } else if (cur->type == FT_TEXT) {
         draw_file_preview(s, s->fs.file_scroll);
         s->ui.preview_st = 1;

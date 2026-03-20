@@ -5,7 +5,7 @@ DBGFLAGS ?= -g -fsanitize=address,undefined
 SRC := $(wildcard src/*.c) $(wildcard src/preview/*.c) $(wildcard helps/*.c)
 BIN := bin/aarn
 
-.PHONY: all debug clean
+.PHONY: all debug clean rebuild
 
 all: $(BIN)
 
@@ -16,6 +16,8 @@ $(BIN): $(SRC)
 debug:
 	@mkdir -p bin
 	$(CC) $(CFLAGS) $(DBGFLAGS) $(SRC) -o bin/aarn_debug
+
+rebuild: clean all
 
 clean:
 	rm -f $(BIN) bin/aarn_debug
