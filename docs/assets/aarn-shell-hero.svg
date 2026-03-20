@@ -1,0 +1,45 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1440" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#141019"/>
+      <stop offset="1" stop-color="#151C28"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1440" height="900" rx="26" fill="url(#bg2)"/>
+  <rect x="40" y="40" width="1360" height="820" rx="22" fill="#0D1118" stroke="#2E394C" stroke-width="2"/>
+
+  <circle cx="80" cy="80" r="8" fill="#FF6B6B"/>
+  <circle cx="106" cy="80" r="8" fill="#F7B267"/>
+  <circle cx="132" cy="80" r="8" fill="#4ECDC4"/>
+  <text x="170" y="88" fill="#CAD5E7" font-family="Menlo, Monaco, monospace" font-size="28">Aarn • shell mode</text>
+
+  <text x="92" y="156" fill="#C8D7F0" font-family="Menlo, Monaco, monospace" font-size="28">Aarn&gt; pwd</text>
+  <text x="92" y="198" fill="#F1F5FA" font-family="Menlo, Monaco, monospace" font-size="24">/Users/a123/Documents/osnova/proga/ci/Aarn</text>
+
+  <text x="92" y="278" fill="#C8D7F0" font-family="Menlo, Monaco, monospace" font-size="28">Aarn&gt; ls</text>
+  <text x="92" y="322" fill="#F0B24A" font-family="Menlo, Monaco, monospace" font-size="24">bin</text>
+  <text x="160" y="322" fill="#F0B24A" font-family="Menlo, Monaco, monospace" font-size="24">headers</text>
+  <text x="286" y="322" fill="#F0B24A" font-family="Menlo, Monaco, monospace" font-size="24">helps</text>
+  <text x="392" y="322" fill="#F0B24A" font-family="Menlo, Monaco, monospace" font-size="24">src</text>
+  <text x="462" y="322" fill="#E8EEF7" font-family="Menlo, Monaco, monospace" font-size="24">README.md</text>
+  <text x="632" y="322" fill="#E8EEF7" font-family="Menlo, Monaco, monospace" font-size="24">Makefile</text>
+
+  <text x="92" y="412" fill="#C8D7F0" font-family="Menlo, Monaco, monospace" font-size="28">Aarn&gt; mkdir "dir with spaces"</text>
+  <text x="92" y="492" fill="#C8D7F0" font-family="Menlo, Monaco, monospace" font-size="28">Aarn&gt; preview</text>
+
+  <rect x="780" y="150" width="520" height="530" rx="18" fill="#121925" stroke="#34435B" stroke-width="2"/>
+  <text x="822" y="206" fill="#9FB4D9" font-family="Menlo, Monaco, monospace" font-size="24">Built-in commands</text>
+  <text x="822" y="262" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="22">• pwd</text>
+  <text x="822" y="302" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="22">• cd</text>
+  <text x="822" y="342" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="22">• ls</text>
+  <text x="822" y="382" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="22">• cat</text>
+  <text x="822" y="422" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="22">• touch</text>
+  <text x="822" y="462" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="22">• mkdir</text>
+  <text x="822" y="502" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="22">• rm</text>
+  <text x="822" y="542" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="22">• clear</text>
+  <text x="822" y="582" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="22">• preview</text>
+  <text x="822" y="622" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="22">• exit</text>
+
+  <text x="92" y="734" fill="#93A7C0" font-family="Menlo, Monaco, monospace" font-size="23">Keyboard-first shell commands, then a direct jump into the framed preview TUI.</text>
+</svg>

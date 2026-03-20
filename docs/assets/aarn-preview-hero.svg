@@ -1,0 +1,53 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1440" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10141E"/>
+      <stop offset="1" stop-color="#161A24"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="130" y1="150" x2="1260" y2="780" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#223148"/>
+      <stop offset="1" stop-color="#1B2330"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1440" height="900" rx="26" fill="url(#bg)"/>
+  <rect x="36" y="36" width="1368" height="828" rx="20" fill="url(#glow)" stroke="#2C3648" stroke-width="2"/>
+
+  <circle cx="74" cy="74" r="8" fill="#FF6B6B"/>
+  <circle cx="100" cy="74" r="8" fill="#F7B267"/>
+  <circle cx="126" cy="74" r="8" fill="#4ECDC4"/>
+  <text x="160" y="82" fill="#C8D2E3" font-family="Menlo, Monaco, monospace" font-size="28">Aarn • preview mode</text>
+
+  <rect x="84" y="120" width="1272" height="690" rx="14" fill="#0E131B" stroke="#59657A" stroke-width="2"/>
+  <line x1="86" y1="174" x2="1354" y2="174" stroke="#59657A" stroke-width="2"/>
+  <line x1="428" y1="122" x2="428" y2="752" stroke="#59657A" stroke-width="2"/>
+  <line x1="86" y1="752" x2="1354" y2="752" stroke="#59657A" stroke-width="2"/>
+
+  <text x="108" y="158" fill="#F8C76C" font-family="Menlo, Monaco, monospace" font-size="25"> preview /Users/a123/Documents/osnova/proga/ci/Aarn </text>
+
+  <rect x="102" y="194" width="300" height="42" rx="8" fill="#F0B24A"/>
+  <text x="124" y="221" fill="#171B22" font-family="Menlo, Monaco, monospace" font-size="24"> .git </text>
+  <text x="118" y="270" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="24"> .gitignore </text>
+  <text x="118" y="313" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="24"> LICENSE </text>
+  <text x="118" y="356" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="24"> Makefile </text>
+  <text x="118" y="399" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="24"> README.md </text>
+  <text x="118" y="442" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="24"> bin </text>
+  <text x="118" y="485" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="24"> headers </text>
+  <text x="118" y="528" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="24"> helps </text>
+  <text x="118" y="571" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="24"> notes.txt </text>
+  <text x="118" y="614" fill="#E7EDF7" font-family="Menlo, Monaco, monospace" font-size="24"> src </text>
+
+  <text x="470" y="238" fill="#9FB4D9" font-family="Menlo, Monaco, monospace" font-size="23">Focused terminal file workflow</text>
+  <text x="470" y="286" fill="#D9E3F2" font-family="Menlo, Monaco, monospace" font-size="22">• live text preview</text>
+  <text x="470" y="326" fill="#D9E3F2" font-family="Menlo, Monaco, monospace" font-size="22">• search and sorting</text>
+  <text x="470" y="366" fill="#D9E3F2" font-family="Menlo, Monaco, monospace" font-size="22">• marked item workflow</text>
+  <text x="470" y="406" fill="#D9E3F2" font-family="Menlo, Monaco, monospace" font-size="22">• cleaner footer and framed layout</text>
+
+  <rect x="468" y="454" width="840" height="224" rx="12" fill="#111926" stroke="#334158" stroke-width="1.5"/>
+  <text x="496" y="496" fill="#C0D4FF" font-family="Menlo, Monaco, monospace" font-size="21">[NORMAL]   pos 1/10  •  type DIR  •  marks 0  •  sort none  •  key -</text>
+  <text x="496" y="544" fill="#9FB2C9" font-family="Menlo, Monaco, monospace" font-size="20">enter open   space mark   : search   a/A name   d/D date   q quit</text>
+  <text x="496" y="610" fill="#8FA2BC" font-family="Menlo, Monaco, monospace" font-size="19">Professional-feeling TUI with stable redraws and predictable controls.</text>
+
+  <rect x="84" y="752" width="1272" height="58" rx="0" fill="#0E131B"/>
+  <text x="112" y="790" fill="#E6F0FF" font-family="Menlo, Monaco, monospace" font-size="24">Aarn ships a small shell and a file browser in one binary.</text>
+</svg>
