@@ -153,14 +153,22 @@ void input_monitor(struct AppState *s) {
         if (read(STDIN_FILENO, &c, 1) <= 0) continue;
         s->rt.last_key = c;
         if (s->rt.mode == 4) {
+            if (c == 'q') {
+                s->rt.mode = 0;
+                redraw(s);
+                continue;
+            }
             if (c == '\x1b') {
                 char seq[2];
-                if (read(STDIN_FILENO, &seq[0], 1) <= 0) {
+                int pending = 0;
+
+                if (ioctl(STDIN_FILENO, FIONREAD, &pending) == -1 || pending < 2) {
                     s->rt.mode = 0;
                     redraw(s);
                     continue;
                 }
-                if (seq[0] != '[') {
+
+                if (read(STDIN_FILENO, &seq[0], 1) <= 0) {
                     s->rt.mode = 0;
                     redraw(s);
                     continue;
@@ -172,20 +180,24 @@ void input_monitor(struct AppState *s) {
                 }
                 int max_scroll = s->fs.file_lines - s->ui.rows;
                 if (max_scroll < 0) max_scroll = 0;
-                if (seq[1] == 'A') {
+                if (seq[0] == '[' && seq[1] == 'A') {
                     if (s->fs.file_scroll > 0) s->fs.file_scroll--;
                     else s->fs.file_scroll = max_scroll;
                     redraw(s);
                     continue;
                 } 
-                if (seq[1] == 'B') {
+                if (seq[0] == '[' && seq[1] == 'B') {
                     if (s->fs.file_scroll < max_scroll) s->fs.file_scroll++;
                     else s->fs.file_scroll = 0;
                     redraw(s);
                     continue;
                 }
+                s->rt.mode = 0;
+                redraw(s);
                 continue;
             }
+
+            continue;
         }
         if (s->rt.mode == 3) {
             if (c == 27) {

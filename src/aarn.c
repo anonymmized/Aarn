@@ -40,8 +40,6 @@ int main() {
     char *history[100] = {NULL};
     int hist_index = 0;
     int hist_len = 0;
-    char *c_d = (char *)current_dir;
-    int len;
     enable_raw();
     while (1) {
         char *line = read_command_line(history, &hist_index, &hist_len, workin);
