@@ -118,13 +118,17 @@ void filter_view(struct AppState *s, char *pattern) {
         FileEntry *entry = &s->fs.f_list[i];
         char *name = strrchr(entry->path, '/');
         name = name ? name + 1 : entry->path;
-        if (strstr(name, pattern)) s->fs.view[s->fs.view_len++] = entry;
+        int score = fuzzy_score(name, pattern);
+        if (score >= 0) {
+            entry->score = score;
+            s->fs.view[s->fs.view_len++] = entry;
+        }
     }
 }
 
-void sort_view(struct AppState *s) {
+void sort_view(struct AppState *s, int (*cmp)(const void *, const void *)) {
     if (!s->fs.view || s->fs.view_len <= 1) return;
-    quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), file_cmp_ptr);
+    quick_sort(s->fs.view, 0, s->fs.view_len - 1, sizeof(FileEntry*), cmp);
 }
 
 void flush_input() {
@@ -151,7 +155,7 @@ void input_monitor(struct AppState *s) {
                 s->rt.mode = 0;
                 rebuild_view(s);
                 filter_view(s, s->fs.enter_search);
-                sort_view(s);
+                sort_view(s, fuzzy_cmp);
                 redraw(s);
                 continue;
             }
@@ -167,7 +171,7 @@ void input_monitor(struct AppState *s) {
                     s->fs.enter_search[s->fs.last_entered] = '\0';
                 }
                 filter_view(s, s->fs.enter_search);
-                sort_view(s);
+                sort_view(s, fuzzy_cmp);
                 redraw(s);
                 continue;
             }
@@ -179,7 +183,7 @@ void input_monitor(struct AppState *s) {
                 }
             }
             filter_view(s, s->fs.enter_search);
-            sort_view(s);
+            sort_view(s, fuzzy_cmp);
             redraw(s);
             continue;
         }
@@ -199,7 +203,7 @@ void input_monitor(struct AppState *s) {
         else is_sort = 0;
         if (is_sort) {
             filter_view(s, s->fs.enter_search);
-            sort_view(s);
+            sort_view(s, fuzzy_cmp);
             s->fs.index = 0;
             s->fs.offset = 0;
             redraw(s);
@@ -207,7 +211,7 @@ void input_monitor(struct AppState *s) {
         }
         
         if (c == 's') {
-            sort_view(s);
+            sort_view(s, fuzzy_cmp);
             redraw(s);
         }
         if (c == ':') {
@@ -233,7 +237,7 @@ void input_monitor(struct AppState *s) {
                 s->fs.len = list(s);
                 rebuild_view(s);
                 filter_view(s, s->fs.enter_search);
-                sort_view(s);
+                sort_view(s, fuzzy_cmp);
                 if (fs_empty(s)) continue;
                 s->fs.index = 0;
                 s->fs.offset = 0;
@@ -258,7 +262,7 @@ void input_monitor(struct AppState *s) {
                 s->fs.len = list(s);
                 rebuild_view(s);
                 filter_view(s, s->fs.enter_search);
-                sort_view(s);
+                sort_view(s, fuzzy_cmp);
                 if (fs_empty(s)) continue;
                 s->fs.index = 0;
                 s->fs.offset = 0;
@@ -333,7 +337,7 @@ void input_monitor(struct AppState *s) {
                     s->fs.len = list(s);
                     rebuild_view(s);
                     filter_view(s, s->fs.enter_search);
-                    sort_view(s);
+                    sort_view(s,fuzzy_cmp);
                     s->fs.index = 0;
                     s->fs.offset = 0;
                     memset(s->fs.marked, 0, 1024 * sizeof(int));
@@ -356,7 +360,7 @@ void input_monitor(struct AppState *s) {
                     s->fs.len = list(s);
                     rebuild_view(s);
                     filter_view(s, s->fs.enter_search);
-                    sort_view(s);
+                    sort_view(s,fuzzy_cmp);
                     if (fs_empty(s)) continue;
                     s->fs.index = 0;
                     s->fs.offset = 0;
