@@ -30,6 +30,7 @@ typedef enum {
 typedef struct {
     char *path;
     FileType type;
+    int score;
 } FileEntry;
 
 struct FSState {

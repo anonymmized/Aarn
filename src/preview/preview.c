@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <limits.h>
+#include <ctype.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
@@ -19,6 +20,31 @@ void swap(void *a, void *b, size_t size) {
     memcpy(tmp, a, size);
     memcpy(a, b, size);
     memcpy(b, tmp, size);
+}
+
+int fuzzy_score(const char *s, const char *q) {
+    int score = 0;
+    int si = 0, qj = 0;
+    int last_match = -1;
+    while (s[si] && q[qj]) {
+        if (tolower(s[si]) == tolower(q[qj])) {
+            score += 10;
+            if (last_match == si-1) score += 15;
+            if (si == 0 || s[si-1] == '/' || s[si-1] == '_' || s[si-1] == '-') score += 20;
+            last_match = si;
+            qj++;
+        }
+        si++;
+    }
+    if (q[qj] != '\0') return -1;
+    return score;
+}
+
+int fuzzy_cmp(const void *a, const void *b) {
+    FileEntry *path1 = *(FileEntry**)a;
+    FileEntry *path2 = *(FileEntry**)b;
+    if (path2->score != path1->score) return path2->score - path1->score;
+    return strcmp(path1->path, path2->path);
 }
 
 int file_cmp_ptr(const void *a, const void *b) {
